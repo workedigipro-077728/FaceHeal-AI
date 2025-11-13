@@ -6,14 +6,15 @@ export default function OnboardingLayout() {
       screenOptions={{
         headerShown: false,
         animation: 'slide_from_right',
+        gestureEnabled: false,
       }}
     >
-      <Stack.Screen name="welcome" />
-      <Stack.Screen name="name" />
-      <Stack.Screen name="age" />
-      <Stack.Screen name="height" />
-      <Stack.Screen name="weight" />
-      <Stack.Screen name="gender" />
+      <Stack.Screen name="welcome" options={{ gestureEnabled: false }} />
+      <Stack.Screen name="name" options={{ gestureEnabled: true }} />
+      <Stack.Screen name="age" options={{ gestureEnabled: true }} />
+      <Stack.Screen name="height" options={{ gestureEnabled: true }} />
+      <Stack.Screen name="weight" options={{ gestureEnabled: true }} />
+      <Stack.Screen name="gender" options={{ gestureEnabled: true }} />
     </Stack>
   );
 }

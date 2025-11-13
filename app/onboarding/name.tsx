@@ -1,79 +1,91 @@
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
 
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import { useThemeColor } from '@/hooks/use-theme-color';
 
-import { OnboardingProgress } from '../components/onboarding-progress';
+// Colors
+const DARK_BG = '#1a3a3f';
+const TEAL_PRIMARY = '#4a9b8e';
+const TEAL_LIGHT = '#6fb5a5';
+const BORDER_TEAL = '#3a6b5f';
+const TEXT_PRIMARY = '#ffffff';
+const TEXT_SECONDARY = '#a0a0a0';
 
 export default function NameScreen() {
   const router = useRouter();
-  const colorScheme = useColorScheme();
-  const tintColor = Colors[colorScheme ?? 'light'].tint;
-  const backgroundColor = useThemeColor({}, 'background');
-  const textColor = useThemeColor({}, 'text');
-  const borderColor = useThemeColor({ light: '#E0E0E0', dark: '#333' }, 'icon');
-
   const [name, setName] = useState('');
 
   const handleNext = () => {
     if (name.trim()) {
-      // TODO: Save to profile/store
       router.push('/onboarding/age');
     }
   };
 
+  const handleBack = () => {
+    router.back();
+  };
+
   return (
-    <ThemedView style={styles.container}>
+    <View style={styles.container}>
+      {/* Header */}
+      <View style={styles.header}>
+        <Pressable onPress={handleBack} style={styles.backButton}>
+          <MaterialIcons name="arrow-back" size={28} color={TEXT_PRIMARY} />
+        </Pressable>
+        <ThemedText style={styles.stepText}>Step 1 of 4</ThemedText>
+        <View style={styles.spacer} />
+      </View>
+
+      {/* Progress Bar */}
+      <View style={styles.progressContainer}>
+        <View style={[styles.progressBar, styles.progressBarActive]} />
+        <View style={[styles.progressBar, styles.progressBarInactive]} />
+        <View style={[styles.progressBar, styles.progressBarInactive]} />
+        <View style={[styles.progressBar, styles.progressBarInactive]} />
+      </View>
+
+      {/* Content */}
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
       >
         <View style={styles.content}>
-          <OnboardingProgress currentStep={1} totalSteps={5} />
+          {/* Title */}
+          <ThemedText style={styles.title}>What's your name?</ThemedText>
 
-          <View style={styles.form}>
-            <ThemedText type="title" style={styles.title}>
-              What's your name?
-            </ThemedText>
-            <ThemedText style={styles.description}>
-              We'll use this to personalize your experience.
-            </ThemedText>
+          {/* Description */}
+          <ThemedText style={styles.description}>
+            This will be displayed on your profile.
+          </ThemedText>
 
-            <TextInput
-              style={[
-                styles.input,
-                {
-                  backgroundColor: colorScheme === 'dark' ? 'rgba(255,255,255,0.1)' : '#F5F5F5',
-                  color: textColor,
-                  borderColor,
-                },
-              ]}
-              placeholder="Enter your name"
-              placeholderTextColor={colorScheme === 'dark' ? '#9BA1A6' : '#687076'}
-              value={name}
-              onChangeText={setName}
-              autoFocus
-              autoCapitalize="words"
-              autoCorrect={false}
-              returnKeyType="next"
-              onSubmitEditing={handleNext}
-              accessibilityLabel="Name input"
-            />
-          </View>
+          {/* Label */}
+          <ThemedText style={styles.label}>Full Name</ThemedText>
+
+          {/* Input */}
+          <TextInput
+            style={styles.input}
+            placeholder="e.g., Jane Doe"
+            placeholderTextColor={TEXT_SECONDARY}
+            value={name}
+            onChangeText={setName}
+            autoFocus
+            autoCapitalize="words"
+            autoCorrect={false}
+            returnKeyType="next"
+            onSubmitEditing={handleNext}
+            accessibilityLabel="Full name input"
+          />
         </View>
 
+        {/* Footer Button */}
         <View style={styles.footer}>
           <Pressable
             style={({ pressed }) => [
-              styles.primaryButton,
+              styles.nextButton,
               {
-                backgroundColor: name.trim() ? tintColor : '#CCCCCC',
-                opacity: pressed && name.trim() ? 0.85 : 1,
+                opacity: pressed ? 0.8 : 1,
               },
             ]}
             onPress={handleNext}
@@ -81,66 +93,111 @@ export default function NameScreen() {
             accessibilityRole="button"
             accessibilityLabel="Continue to age"
           >
-            <ThemedText type="defaultSemiBold" style={styles.buttonText}>
-              Continue
-            </ThemedText>
+            <ThemedText style={styles.nextButtonText}>Next</ThemedText>
           </Pressable>
         </View>
       </KeyboardAvoidingView>
-    </ThemedView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: DARK_BG,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 12,
+  },
+  backButton: {
+    padding: 8,
+  },
+  stepText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: TEXT_PRIMARY,
+    textAlign: 'center',
+    flex: 1,
+  },
+  spacer: {
+    width: 44,
+  },
+  progressContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    gap: 8,
+  },
+  progressBar: {
+    flex: 1,
+    height: 6,
+    borderRadius: 3,
+  },
+  progressBarActive: {
+    backgroundColor: TEAL_PRIMARY,
+  },
+  progressBarInactive: {
+    backgroundColor: '#4a5860',
   },
   keyboardView: {
     flex: 1,
   },
   content: {
     flex: 1,
-    padding: 24,
-    paddingTop: 60,
-  },
-  form: {
-    flex: 1,
-    justifyContent: 'center',
-    gap: 16,
+    paddingHorizontal: 24,
+    paddingTop: 40,
   },
   title: {
-    fontSize: 32,
-    lineHeight: 40,
-    marginBottom: 8,
+    fontSize: 40,
+    fontWeight: '700',
+    color: TEXT_PRIMARY,
+    marginBottom: 16,
+    lineHeight: 48,
   },
   description: {
     fontSize: 16,
-    opacity: 0.7,
-    lineHeight: 24,
+    color: TEXT_SECONDARY,
     marginBottom: 32,
+    lineHeight: 22,
+  },
+  label: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: TEXT_PRIMARY,
+    marginBottom: 12,
   },
   input: {
-    fontSize: 18,
+    fontSize: 16,
     padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: BORDER_TEAL,
+    color: TEXT_PRIMARY,
     minHeight: 56,
+    backgroundColor: 'transparent',
   },
   footer: {
     padding: 24,
     paddingBottom: 40,
   },
-  primaryButton: {
-    borderRadius: 16,
-    paddingVertical: 16,
+  nextButton: {
+    backgroundColor: TEAL_PRIMARY,
+    borderRadius: 24,
+    paddingVertical: 18,
     paddingHorizontal: 24,
     alignItems: 'center',
     minHeight: 56,
     justifyContent: 'center',
   },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
+  nextButtonText: {
+    color: TEXT_PRIMARY,
+    fontSize: 18,
+    fontWeight: '600',
   },
 });
 

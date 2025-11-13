@@ -11,20 +11,32 @@ import {
   View,
   Platform,
 } from 'react-native';
+import { useRouter } from 'expo-router';
+import { MaterialIcons } from '@expo/vector-icons';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { analyzeFaceHealth, FaceHealthAnalysis } from '@/src/services/gemini.service';
+import CameraComponent from '@/components/camera-view';
 
 type Status = 'idle' | 'loading' | 'success' | 'error';
+type ViewMode = 'menu' | 'camera';
+
+const DARK_BG = '#1a3a3f';
+const TEAL_BRIGHT = '#00d4ff';
+const TEAL_DARK = '#2a5a5f';
+const TEXT_PRIMARY = '#ffffff';
+const TEXT_SECONDARY = '#a0a0a0';
 
 export default function ScanScreen() {
+  const router = useRouter();
   const [status, setStatus] = useState<Status>('idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [result, setResult] = useState<FaceHealthAnalysis | null>(null);
   const [selectedImageUri, setSelectedImageUri] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<ViewMode>('menu');
   const colorScheme = useColorScheme();
   const themeKey = colorScheme ?? 'light';
 
@@ -36,6 +48,15 @@ export default function ScanScreen() {
   const errorBackground = useMemo(
     () => (themeKey === 'dark' ? 'rgba(255,85,85,0.18)' : 'rgba(255,85,85,0.12)'),
     [themeKey]
+  );
+
+  const handleCameraPhoto = useCallback(
+    (uri: string) => {
+      setSelectedImageUri(uri);
+      setViewMode('menu');
+      analyzeImage(uri);
+    },
+    []
   );
 
   const handleSelectImage = useCallback(async () => {
@@ -67,52 +88,140 @@ export default function ScanScreen() {
       }
 
       setSelectedImageUri(asset.uri);
-      setStatus('loading');
-      setErrorMessage(null);
-
-      const base64 = await readFileAsBase64(asset.uri);
-
-      const analysis = await analyzeFaceHealth({
-        imageBase64: base64,
-        mimeType: asset.mimeType ?? undefined,
-      });
-
-      setResult(analysis);
-      setStatus('success');
+      await analyzeImage(asset.uri, asset.mimeType ?? undefined);
     } catch (error) {
       console.error(error);
       const message =
-        error instanceof Error ? error.message : 'Failed to analyze face health.';
+        error instanceof Error ? error.message : 'Failed to select image.';
       setErrorMessage(message);
       setStatus('error');
     }
   }, []);
 
+  const analyzeImage = useCallback(
+    async (uri: string, mimeType?: string) => {
+      try {
+        setStatus('loading');
+        setErrorMessage(null);
+
+        const base64 = await readFileAsBase64(uri);
+
+        const analysis = await analyzeFaceHealth({
+          imageBase64: base64,
+          mimeType: mimeType,
+        });
+
+        setResult(analysis);
+        setStatus('success');
+
+        // Navigate to analysis page after a short delay for better UX
+        setTimeout(() => {
+          router.push({
+            pathname: '/(tabs)/analysis' as any,
+            params: {
+              data: JSON.stringify(analysis),
+              image: uri,
+            },
+          });
+        }, 500);
+      } catch (error) {
+        console.error(error);
+        const message =
+          error instanceof Error ? error.message : 'Failed to analyze face health.';
+        setErrorMessage(message);
+        setStatus('error');
+      }
+    },
+    [router]
+  );
+
+  // Camera View
+  if (viewMode === 'camera') {
+    return (
+      <CameraComponent
+        onPhotoTaken={handleCameraPhoto}
+        onCancel={() => setViewMode('menu')}
+      />
+    );
+  }
+
+  // Menu View
   return (
     <ThemedView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <ThemedView style={styles.header}>
           <ThemedText type="title">Face Scan</ThemedText>
           <ThemedText type="subtitle">
-            Upload a clear photo to receive AI-powered skin health insights.
+            Capture or upload a clear photo to receive AI-powered skin health insights.
           </ThemedText>
         </ThemedView>
 
-        <ThemedView style={[styles.card, { backgroundColor: cardBackground }]}>
-          <PrimaryButton
-            label={status === 'loading' ? 'Analyzing…' : 'Select photo'}
+        {/* Capture Options */}
+        <View style={styles.optionsContainer}>
+          {/* Camera Option */}
+          <Pressable
+            style={({ pressed }) => [
+              styles.optionCard,
+              styles.cameraCard,
+              { opacity: pressed ? 0.85 : 1 },
+            ]}
+            onPress={() => setViewMode('camera')}
+            disabled={status === 'loading'}
+            testID="take-photo-button"
+          >
+            <View style={[styles.optionIconContainer, { backgroundColor: TEAL_BRIGHT }]}>
+              <MaterialIcons name="camera-alt" size={32} color={DARK_BG} />
+            </View>
+            <View style={styles.optionTextContainer}>
+              <ThemedText style={styles.optionTitle}>Take a Photo</ThemedText>
+              <ThemedText style={styles.optionDescription}>
+                Use your camera for real-time face scanning
+              </ThemedText>
+            </View>
+            <MaterialIcons name="chevron-right" size={24} color={TEXT_SECONDARY} />
+          </Pressable>
+
+          {/* Gallery Option */}
+          <Pressable
+            style={({ pressed }) => [
+              styles.optionCard,
+              styles.galleryCard,
+              { opacity: pressed ? 0.85 : 1 },
+            ]}
             onPress={handleSelectImage}
             disabled={status === 'loading'}
-            tintColor={tintColor}
-          />
-          <ThemedText style={styles.helperText}>
-            Tips: use good lighting, remove heavy makeup, keep your face centered.
-          </ThemedText>
+            testID="choose-gallery-button"
+          >
+            <View style={[styles.optionIconContainer, { backgroundColor: TEAL_BRIGHT }]}>
+              <MaterialIcons name="image" size={32} color={DARK_BG} />
+            </View>
+            <View style={styles.optionTextContainer}>
+              <ThemedText style={styles.optionTitle}>Choose from Gallery</ThemedText>
+              <ThemedText style={styles.optionDescription}>
+                Select a photo from your library
+              </ThemedText>
+            </View>
+            <MaterialIcons name="chevron-right" size={24} color={TEXT_SECONDARY} />
+          </Pressable>
+        </View>
+
+        {/* Tips Card */}
+        <ThemedView style={[styles.card, { backgroundColor: cardBackground }]}>
+          <View style={styles.tipsHeader}>
+            <MaterialIcons name="info" size={20} color={TEAL_BRIGHT} />
+            <ThemedText type="defaultSemiBold">Tips for best results</ThemedText>
+          </View>
+          <ThemedText style={styles.tipText}>✓ Use good lighting (natural light is best)</ThemedText>
+          <ThemedText style={styles.tipText}>✓ Face the camera directly</ThemedText>
+          <ThemedText style={styles.tipText}>✓ Remove heavy makeup if possible</ThemedText>
+          <ThemedText style={styles.tipText}>✓ Keep your face centered in frame</ThemedText>
+          <ThemedText style={styles.tipText}>✓ Avoid shadows on your face</ThemedText>
         </ThemedView>
 
+        {/* Selected Image Preview */}
         {selectedImageUri && (
           <ThemedView style={styles.previewContainer}>
-            <ThemedText type="subtitle">Selected photo</ThemedText>
+            <ThemedText type="subtitle">Captured photo</ThemedText>
             <Image
               source={{ uri: selectedImageUri }}
               style={styles.previewImage}
@@ -121,19 +230,25 @@ export default function ScanScreen() {
           </ThemedView>
         )}
 
+        {/* Loading State */}
         {status === 'loading' && (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={tintColor} />
             <ThemedText style={styles.loadingText}>
-              Scanning skin health. This may take a few seconds…
+              Analyzing your face health...
+            </ThemedText>
+            <ThemedText style={styles.loadingSubtext}>
+              This may take a few seconds
             </ThemedText>
           </View>
         )}
 
+        {/* Error State */}
         {status === 'error' && errorMessage && (
           <ErrorBanner message={errorMessage} backgroundColor={errorBackground} />
         )}
 
+        {/* Analysis Results */}
         {status === 'success' && result && (
           <AnalysisResult result={result} cardBackground={cardBackground} />
         )}
@@ -267,43 +382,6 @@ function ErrorBanner({ message, backgroundColor }: { message: string; background
   );
 }
 
-function PrimaryButton({
-  label,
-  onPress,
-  disabled,
-  tintColor,
-}: {
-  label: string;
-  onPress: () => void;
-  disabled?: boolean;
-  tintColor: string;
-}) {
-  return (
-    <Pressable
-      accessibilityLabel={label}
-      accessibilityRole="button"
-      disabled={disabled}
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.button,
-        {
-          backgroundColor: disabled
-            ? 'rgba(150,150,150,0.6)'
-            : tintColor,
-          opacity: pressed && !disabled ? 0.85 : 1,
-        },
-      ]}
-    >
-      <ThemedText
-        type="defaultSemiBold"
-        style={disabled ? styles.buttonTextDisabled : styles.buttonText}
-      >
-        {label}
-      </ThemedText>
-    </Pressable>
-  );
-}
-
 function formatNumber(value: unknown, fractionDigits: number): string {
   if (typeof value === 'number' && !Number.isNaN(value)) {
     return value.toFixed(fractionDigits);
@@ -362,12 +440,52 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    gap: 24,
+    gap: 16,
     padding: 20,
     paddingBottom: 40,
   },
   header: {
     gap: 8,
+  },
+  optionsContainer: {
+    gap: 12,
+  },
+  optionCard: {
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderRadius: 16,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  cameraCard: {
+    borderWidth: 1.5,
+    borderColor: TEAL_BRIGHT,
+  },
+  galleryCard: {
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  optionIconContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    flexShrink: 0,
+  },
+  optionTextContainer: {
+    flex: 1,
+  },
+  optionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: TEXT_PRIMARY,
+    marginBottom: 4,
+  },
+  optionDescription: {
+    fontSize: 13,
+    color: TEXT_SECONDARY,
   },
   card: {
     backgroundColor: 'rgba(255,255,255,0.04)',
@@ -375,8 +493,17 @@ const styles = StyleSheet.create({
     padding: 20,
     gap: 12,
   },
-  helperText: {
-    opacity: 0.7,
+  tipsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 8,
+  },
+  tipText: {
+    fontSize: 14,
+    color: TEXT_SECONDARY,
+    marginTop: 6,
+    lineHeight: 20,
   },
   previewContainer: {
     gap: 12,
@@ -389,9 +516,16 @@ const styles = StyleSheet.create({
   loadingContainer: {
     alignItems: 'center',
     gap: 12,
+    paddingVertical: 32,
   },
   loadingText: {
+    fontSize: 16,
+    fontWeight: '600',
     textAlign: 'center',
+  },
+  loadingSubtext: {
+    fontSize: 13,
+    opacity: 0.7,
   },
   metricsRow: {
     flexDirection: 'row',
@@ -429,23 +563,4 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 8,
   },
-  button: {
-    borderRadius: 14,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  buttonEnabled: {
-    backgroundColor: Colors.light.tint,
-  },
-  buttonDisabled: {
-    backgroundColor: '#999',
-  },
-  buttonText: {
-    color: '#fff',
-  },
-  buttonTextDisabled: {
-    color: '#eee',
-    opacity: 0.7,
-  },
 });
-

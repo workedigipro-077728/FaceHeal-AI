@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
-import React from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { Animated, Pressable, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 
@@ -16,12 +16,51 @@ const LIGHT_GRAY = '#b0b0b0';
 const PROGRESS_CYAN = '#00d4ff';
 const PROGRESS_DARK_TEAL = '#1a4a4f';
 
+const SPLASH_DURATION = 3000; // 3 seconds
+
 export default function WelcomeScreen() {
   const router = useRouter();
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(0.8)).current;
+
+  useEffect(() => {
+    // Animate in
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 1000,
+        useNativeDriver: true,
+      }),
+      Animated.timing(scaleAnim, {
+        toValue: 1,
+        duration: 1000,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    // Navigate to name screen after 3 seconds
+    const timer = setTimeout(() => {
+      router.push('/onboarding/name' as any);
+    }, SPLASH_DURATION);
+
+    return () => clearTimeout(timer);
+  }, [router]);
+
+  const handlePress = () => {
+    router.push('/onboarding/name' as any);
+  };
 
   return (
     <View style={styles.container}>
-      <View style={styles.content}>
+      <Animated.View
+        style={[
+          styles.content,
+          {
+            opacity: fadeAnim,
+            transform: [{ scale: scaleAnim }],
+          },
+        ]}
+      >
         {/* Logo Container */}
         <View style={styles.logoContainer}>
           <View style={styles.logoCircle}>
@@ -42,7 +81,7 @@ export default function WelcomeScreen() {
 
         {/* Tagline */}
         <ThemedText style={styles.tagline}>Your Personal Face Health Analyst.</ThemedText>
-      </View>
+      </Animated.View>
 
       {/* Progress Bar */}
       <View style={styles.progressContainer}>
@@ -54,7 +93,7 @@ export default function WelcomeScreen() {
       {/* Hidden button to navigate - tap anywhere to continue */}
       <Pressable
         style={styles.hiddenButton}
-        onPress={() => router.push('/onboarding/name' as any)}
+        onPress={handlePress}
         accessibilityRole="button"
         accessibilityLabel="Continue to next screen"
       />

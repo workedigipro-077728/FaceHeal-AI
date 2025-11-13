@@ -114,7 +114,7 @@ export async function analyzeFaceHealth({
     return JSON.parse(sanitized) as FaceHealthAnalysis;
   } catch (error) {
     const normalizedError = normalizeGeminiError(error);
-    console.error("❌ Gemini API Error:", normalizedError);
+    console.error("❌ API Error:", normalizedError);
     throw normalizedError;
   }
 }
@@ -157,10 +157,10 @@ function normalizeGeminiError(error: unknown): Error {
       | { error?: { message?: string } }
       | undefined;
     const message =
-      responseData?.error?.message ?? error.message ?? "Unknown Gemini API error";
+      responseData?.error?.message ?? error.message ?? "Unknown API error";
 
     return new Error(
-      status ? `Gemini API error (${status}): ${message}` : `Gemini API error: ${message}`
+      status ? ` API error (${status}): ${message}` : ` API error: ${message}`
     );
   }
 

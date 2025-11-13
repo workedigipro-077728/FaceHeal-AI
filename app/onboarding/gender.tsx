@@ -7,6 +7,7 @@ import { ThemedView } from '@/components/themed-view';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useThemeColor } from '@/hooks/use-theme-color';
+import { useOnboarding } from '@/hooks/use-onboarding';
 
 import { OnboardingProgress } from '../components/onboarding-progress';
 
@@ -20,14 +21,16 @@ export default function GenderScreen() {
     { light: 'rgba(0,0,0,0.04)', dark: 'rgba(255,255,255,0.08)' },
     'background'
   );
+  const { completeOnboarding } = useOnboarding();
 
   const [selectedGender, setSelectedGender] = useState<GenderOption | null>(null);
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (selectedGender) {
-      // TODO: Save to profile/store
-      // Navigate to main app
-      router.replace('/(tabs)');
+      // Mark onboarding as complete
+      await completeOnboarding();
+      // Navigate to authentication
+      router.replace('/auth');
     }
   };
 

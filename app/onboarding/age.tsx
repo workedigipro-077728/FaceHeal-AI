@@ -1,150 +1,220 @@
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import React, { useRef, useState } from 'react';
+import { FlatList, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
 
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import { useThemeColor } from '@/hooks/use-theme-color';
 
-import { OnboardingProgress } from '../components/onboarding-progress';
+// Colors
+const DARK_BG = '#1a3a3f';
+const TEAL_PRIMARY = '#4a9b8e';
+const TEAL_BRIGHT = '#00d4ff';
+const BORDER_TEAL = '#3a6b5f';
+const TEXT_PRIMARY = '#ffffff';
+const TEXT_SECONDARY = '#a0a0a0';
+const TEXT_MUTED = '#5a6a70';
+
+const MIN_AGE = 13;
+const MAX_AGE = 120;
 
 export default function AgeScreen() {
   const router = useRouter();
-  const colorScheme = useColorScheme();
-  const tintColor = Colors[colorScheme ?? 'light'].tint;
-  const textColor = useThemeColor({}, 'text');
-  const borderColor = useThemeColor({ light: '#E0E0E0', dark: '#333' }, 'icon');
+  const [selectedAge, setSelectedAge] = useState(25);
+  const scrollViewRef = useRef<ScrollView>(null);
 
-  const [age, setAge] = useState('');
+  const ages = Array.from({ length: MAX_AGE - MIN_AGE + 1 }, (_, i) => MIN_AGE + i);
 
   const handleNext = () => {
-    const ageNum = parseInt(age, 10);
-    if (ageNum >= 13 && ageNum <= 120) {
-      // TODO: Save to profile/store
-      router.push('/onboarding/height');
-    }
+    router.push('/onboarding/height');
   };
 
-  const isValid = () => {
-    const ageNum = parseInt(age, 10);
-    return ageNum >= 13 && ageNum <= 120;
+  const handleBack = () => {
+    router.back();
   };
+
+  const renderAgeItem = (age: number) => (
+    <Pressable
+      key={age}
+      onPress={() => setSelectedAge(age)}
+      style={[styles.ageItem, selectedAge === age && styles.ageItemSelected]}
+    >
+      <ThemedText
+        style={[
+          styles.ageText,
+          selectedAge === age && styles.ageTextSelected,
+        ]}
+      >
+        {age}
+      </ThemedText>
+    </Pressable>
+  );
 
   return (
-    <ThemedView style={styles.container}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardView}
+    <View style={styles.container}>
+      {/* Header */}
+      <View style={styles.header}>
+        <Pressable onPress={handleBack} style={styles.backButton}>
+          <MaterialIcons name="arrow-back" size={28} color={TEXT_PRIMARY} />
+        </Pressable>
+      </View>
+
+      {/* Progress Indicators */}
+      <View style={styles.progressContainer}>
+        <View style={[styles.progressDot, styles.progressDotInactive]} />
+        <View style={[styles.progressDot, styles.progressDotActive]} />
+        <View style={[styles.progressDot, styles.progressDotInactive]} />
+        <View style={[styles.progressDot, styles.progressDotInactive]} />
+      </View>
+
+      {/* Content */}
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
       >
-        <View style={styles.content}>
-          <OnboardingProgress currentStep={2} totalSteps={5} />
+        {/* Title */}
+        <ThemedText style={styles.title}>What is your age?</ThemedText>
 
-          <View style={styles.form}>
-            <ThemedText type="title" style={styles.title}>
-              How old are you?
-            </ThemedText>
-            <ThemedText style={styles.description}>
-              This helps us provide age-appropriate recommendations.
-            </ThemedText>
+        {/* Description */}
+        <ThemedText style={styles.description}>
+          This helps us personalize your skin health analysis.
+        </ThemedText>
 
-            <TextInput
-              style={[
-                styles.input,
-                {
-                  backgroundColor: colorScheme === 'dark' ? 'rgba(255,255,255,0.1)' : '#F5F5F5',
-                  color: textColor,
-                  borderColor,
-                },
-              ]}
-              placeholder="Enter your age"
-              placeholderTextColor={colorScheme === 'dark' ? '#9BA1A6' : '#687076'}
-              value={age}
-              onChangeText={setAge}
-              autoFocus
-              keyboardType="number-pad"
-              returnKeyType="next"
-              onSubmitEditing={handleNext}
-              accessibilityLabel="Age input"
-            />
-          </View>
-        </View>
-
-        <View style={styles.footer}>
-          <Pressable
-            style={({ pressed }) => [
-              styles.primaryButton,
-              {
-                backgroundColor: isValid() ? tintColor : '#CCCCCC',
-                opacity: pressed && isValid() ? 0.85 : 1,
-              },
-            ]}
-            onPress={handleNext}
-            disabled={!isValid()}
-            accessibilityRole="button"
-            accessibilityLabel="Continue to height"
+        {/* Age Picker */}
+        <View style={styles.pickerContainer}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            scrollEventThrottle={16}
+            contentContainerStyle={styles.agesScroll}
+            ref={scrollViewRef}
           >
-            <ThemedText type="defaultSemiBold" style={styles.buttonText}>
-              Continue
-            </ThemedText>
-          </Pressable>
+            {ages.map(renderAgeItem)}
+          </ScrollView>
         </View>
-      </KeyboardAvoidingView>
-    </ThemedView>
+      </ScrollView>
+
+      {/* Footer Button */}
+      <View style={styles.footer}>
+        <Pressable
+          style={({ pressed }) => [
+            styles.nextButton,
+            {
+              opacity: pressed ? 0.8 : 1,
+            },
+          ]}
+          onPress={handleNext}
+          accessibilityRole="button"
+          accessibilityLabel="Continue to height"
+        >
+          <ThemedText style={styles.nextButtonText}>Next</ThemedText>
+        </Pressable>
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: DARK_BG,
   },
-  keyboardView: {
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 12,
+  },
+  backButton: {
+    padding: 8,
+  },
+  progressContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 24,
+    paddingVertical: 20,
+    gap: 12,
+    justifyContent: 'center',
+  },
+  progressDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+  },
+  progressDotActive: {
+    backgroundColor: TEAL_BRIGHT,
+  },
+  progressDotInactive: {
+    backgroundColor: '#4a5860',
+  },
+  scrollView: {
     flex: 1,
   },
   content: {
-    flex: 1,
-    padding: 24,
-    paddingTop: 60,
-  },
-  form: {
-    flex: 1,
-    justifyContent: 'center',
-    gap: 16,
+    paddingHorizontal: 24,
+    paddingTop: 20,
+    paddingBottom: 40,
   },
   title: {
-    fontSize: 32,
-    lineHeight: 40,
-    marginBottom: 8,
+    fontSize: 40,
+    fontWeight: '700',
+    color: TEXT_PRIMARY,
+    marginBottom: 16,
+    lineHeight: 48,
+    textAlign: 'center',
   },
   description: {
     fontSize: 16,
-    opacity: 0.7,
-    lineHeight: 24,
-    marginBottom: 32,
+    color: TEXT_SECONDARY,
+    marginBottom: 60,
+    lineHeight: 22,
+    textAlign: 'center',
   },
-  input: {
-    fontSize: 18,
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    minHeight: 56,
+  pickerContainer: {
+    marginBottom: 40,
+  },
+  agesScroll: {
+    paddingHorizontal: 40,
+    gap: 12,
+    alignItems: 'center',
+  },
+  ageItem: {
+    paddingHorizontal: 16,
+    paddingVertical: 24,
+    borderRadius: 16,
+    minWidth: 80,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ageItemSelected: {
+    backgroundColor: TEAL_PRIMARY,
+  },
+  ageText: {
+    fontSize: 24,
+    fontWeight: '600',
+    color: TEXT_MUTED,
+  },
+  ageTextSelected: {
+    color: TEXT_PRIMARY,
+    fontSize: 28,
+    fontWeight: '700',
   },
   footer: {
     padding: 24,
     paddingBottom: 40,
   },
-  primaryButton: {
-    borderRadius: 16,
-    paddingVertical: 16,
+  nextButton: {
+    backgroundColor: TEAL_BRIGHT,
+    borderRadius: 24,
+    paddingVertical: 18,
     paddingHorizontal: 24,
     alignItems: 'center',
     minHeight: 56,
     justifyContent: 'center',
   },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
+  nextButtonText: {
+    color: '#1a3a3f',
+    fontSize: 18,
+    fontWeight: '600',
   },
 });
-
