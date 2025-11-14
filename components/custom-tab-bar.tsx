@@ -3,10 +3,12 @@ import { View, TouchableOpacity, StyleSheet, Text, Animated } from 'react-native
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { Colors } from '@/constants/theme';
 
 export function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
+  const themeColor = Colors[colorScheme ?? 'light'].tint;
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
   const [tooltipTimeout, setTooltipTimeout] = useState<NodeJS.Timeout | null>(null);
 
@@ -14,6 +16,7 @@ export function CustomTabBar({ state, descriptors, navigation }: BottomTabBarPro
     index: 'house.fill',
     scan: 'magnifyingglass',
     analysis: 'chart.bar.fill',
+    'daily-routine': 'checkmark.circle.fill',
     settings: 'gearshape.fill',
   };
 
@@ -68,22 +71,22 @@ export function CustomTabBar({ state, descriptors, navigation }: BottomTabBarPro
                 onPressOut={onPressOut}
                 style={[
                   styles.tab,
-                  isFocused && styles.activeTab,
+                  isFocused && [styles.activeTab, { backgroundColor: `${themeColor}20` }],
                 ]}
                 activeOpacity={0.7}
               >
                 {isFocused ? (
-                  <View style={styles.activeIconContainer}>
+                  <View style={[styles.activeIconContainer, { backgroundColor: `${themeColor}99` }]}>
                     <IconSymbol
                       size={26}
-                      name={iconName}
+                      name={iconName as any}
                       color="#ffffff"
                     />
                   </View>
                 ) : (
                   <IconSymbol
                     size={26}
-                    name={iconName}
+                    name={iconName as any}
                     color="#9CA3AF"
                   />
                 )}
@@ -100,6 +103,7 @@ export function CustomTabBar({ state, descriptors, navigation }: BottomTabBarPro
             styles.indicator,
             {
               marginLeft: `${(state.index / state.routes.length) * 100}%`,
+              backgroundColor: themeColor,
             },
           ]}
         />
@@ -132,6 +136,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 8,
     width: '100%',
+    borderRadius: 12,
   },
   activeTab: {
     paddingVertical: 8,
@@ -142,7 +147,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(139, 92, 246, 0.7)',
   },
   tooltip: {
     paddingHorizontal: 10,
@@ -168,6 +172,5 @@ const styles = StyleSheet.create({
     height: 3,
     width: '20%',
     borderRadius: 1.5,
-    backgroundColor: 'rgba(139, 92, 246, 0.8)',
   },
 });

@@ -41,6 +41,12 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="daily-routine"
+        options={{
+          title: 'Routine',
+        }}
+      />
+      <Tabs.Screen
         name="settings"
         options={{
           title: 'Settings',

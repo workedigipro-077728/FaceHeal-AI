@@ -20,6 +20,7 @@ const MAPPING = {
   'chevron.right': 'chevron-right',
   'magnifyingglass': 'face',
   'chart.bar.fill': 'bar-chart',
+  'checkmark.circle.fill': 'done-all',
   'gearshape.fill': 'settings',
 } as IconMapping;
 
