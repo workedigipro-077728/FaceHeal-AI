@@ -211,21 +211,7 @@ export default function AnalysisScreen() {
           </View>
         )}
 
-        {/* Skin Condition Details */}
-        {skinCondition && Object.keys(skinCondition).length > 0 && (
-          <View style={styles.conditionSection}>
-            <ThemedText style={styles.sectionTitle}>Skin Condition Analysis</ThemedText>
-            <View style={styles.conditionCards}>
-              {Object.entries(skinCondition).map(([key, value], index) => (
-                <ConditionCard
-                  key={index}
-                  label={formatLabel(key)}
-                  value={String(value)}
-                />
-              ))}
-            </View>
-          </View>
-        )}
+
 
         {/* Recommendations */}
         {recommendations && (
@@ -322,15 +308,6 @@ function MetricCard({
       </View>
       <ThemedText style={styles.metricLabel}>{label}</ThemedText>
       <ThemedText style={styles.metricValue}>{value}</ThemedText>
-    </View>
-  );
-}
-
-function ConditionCard({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={styles.conditionCard}>
-      <ThemedText style={styles.conditionLabel}>{label}</ThemedText>
-      <ThemedText style={styles.conditionValue}>{value}</ThemedText>
     </View>
   );
 }
@@ -512,31 +489,6 @@ const styles = StyleSheet.create({
   issueText: {
     flex: 1,
     fontSize: 14,
-    color: TEXT_PRIMARY,
-  },
-  conditionSection: {
-    marginBottom: 24,
-  },
-  conditionCards: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  conditionCard: {
-    flex: 1,
-    minWidth: '45%',
-    backgroundColor: TEAL_DARK,
-    borderRadius: 12,
-    padding: 12,
-  },
-  conditionLabel: {
-    fontSize: 12,
-    color: TEXT_SECONDARY,
-    marginBottom: 6,
-  },
-  conditionValue: {
-    fontSize: 14,
-    fontWeight: '600',
     color: TEXT_PRIMARY,
   },
   recommendationsSection: {

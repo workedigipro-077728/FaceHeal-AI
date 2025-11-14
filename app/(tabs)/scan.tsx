@@ -1,15 +1,14 @@
-import { Image } from 'expo-image';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as ImagePicker from 'expo-image-picker';
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState, useEffect, useRef } from 'react';
 import {
-  ActivityIndicator,
   Alert,
   Pressable,
   ScrollView,
   StyleSheet,
   View,
   Platform,
+  Animated,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -27,8 +26,10 @@ type ViewMode = 'menu' | 'camera';
 const DARK_BG = '#1a3a3f';
 const TEAL_BRIGHT = '#00d4ff';
 const TEAL_DARK = '#2a5a5f';
+const TEAL_MEDIUM = '#4a9b8e';
 const TEXT_PRIMARY = '#ffffff';
 const TEXT_SECONDARY = '#a0a0a0';
+const ACCENT_GREEN = '#00d97d';
 
 export default function ScanScreen() {
   const router = useRouter();
@@ -40,15 +41,33 @@ export default function ScanScreen() {
   const colorScheme = useColorScheme();
   const themeKey = colorScheme ?? 'light';
 
+  // Animation state
+  const scanAnim = useRef(new Animated.Value(0)).current;
+  const rotateAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (status === 'loading') {
+      Animated.loop(
+        Animated.parallel([
+          Animated.timing(scanAnim, {
+            toValue: 1,
+            duration: 2000,
+            useNativeDriver: false,
+          }),
+          Animated.timing(rotateAnim, {
+            toValue: 1,
+            duration: 2000,
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
+    } else {
+      scanAnim.setValue(0);
+      rotateAnim.setValue(0);
+    }
+  }, [status, scanAnim, rotateAnim]);
+
   const tintColor = Colors[themeKey].tint;
-  const cardBackground = useMemo(
-    () => (themeKey === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)'),
-    [themeKey]
-  );
-  const errorBackground = useMemo(
-    () => (themeKey === 'dark' ? 'rgba(255,85,85,0.18)' : 'rgba(255,85,85,0.12)'),
-    [themeKey]
-  );
 
   const handleCameraPhoto = useCallback(
     (uri: string) => {
@@ -145,265 +164,136 @@ export default function ScanScreen() {
     );
   }
 
-  // Menu View
+  // Menu View - Redesigned Layout
   return (
     <ThemedView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <ThemedView style={styles.header}>
-          <ThemedText type="title">Face Scan</ThemedText>
-          <ThemedText type="subtitle">
-            Capture or upload a clear photo to receive AI-powered skin health insights.
-          </ThemedText>
-        </ThemedView>
+      {/* Header */}
+      <View style={styles.header}>
+        <Pressable onPress={() => router.back()} hitSlop={10}>
+          <MaterialIcons name="close" size={28} color={TEXT_PRIMARY} />
+        </Pressable>
+        <Pressable onPress={() => Alert.alert('Help', 'Tips: Make sure your face is fully visible and well-lit.')} hitSlop={10}>
+          <MaterialIcons name="help-outline" size={28} color={TEXT_PRIMARY} />
+        </Pressable>
+      </View>
 
-        {/* Capture Options */}
-        <View style={styles.optionsContainer}>
-          {/* Camera Option */}
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Content */}
+        <View style={styles.content}>
+          {/* Title */}
+          <ThemedText style={styles.title}>Take a photo</ThemedText>
+
+          {/* Subtitle */}
+          <ThemedText style={styles.subtitle}>
+            Make sure your face is fully visible and well-lit
+          </ThemedText>
+
+          {/* Illustration/Image Area */}
+          {status === 'loading' ? (
+            <ScanningAnimation scanAnim={scanAnim} rotateAnim={rotateAnim} />
+          ) : (
+            <View style={styles.illustrationContainer}>
+              <View style={styles.faceIllustration}>
+                <MaterialIcons name="face" size={120} color={TEAL_BRIGHT} />
+              </View>
+            </View>
+          )}
+
+          {/* Error Banner */}
+          {status === 'error' && errorMessage && (
+            <View style={styles.errorBanner}>
+              <MaterialIcons name="error-outline" size={20} color="#ef4444" />
+              <ThemedText style={styles.errorText}>{errorMessage}</ThemedText>
+            </View>
+          )}
+        </View>
+      </ScrollView>
+
+      {/* Action Buttons */}
+      {status !== 'loading' && (
+        <View style={styles.buttonContainer}>
           <Pressable
             style={({ pressed }) => [
-              styles.optionCard,
-              styles.cameraCard,
+              styles.primaryButton,
               { opacity: pressed ? 0.85 : 1 },
             ]}
             onPress={() => setViewMode('camera')}
-            disabled={status === 'loading'}
-            testID="take-photo-button"
           >
-            <View style={[styles.optionIconContainer, { backgroundColor: TEAL_BRIGHT }]}>
-              <MaterialIcons name="camera-alt" size={32} color={DARK_BG} />
-            </View>
-            <View style={styles.optionTextContainer}>
-              <ThemedText style={styles.optionTitle}>Take a Photo</ThemedText>
-              <ThemedText style={styles.optionDescription}>
-                Use your camera for real-time face scanning
-              </ThemedText>
-            </View>
-            <MaterialIcons name="chevron-right" size={24} color={TEXT_SECONDARY} />
+            <MaterialIcons name="camera-alt" size={20} color={DARK_BG} />
+            <ThemedText style={styles.primaryButtonText}>Take Photo</ThemedText>
           </Pressable>
 
-          {/* Gallery Option */}
           <Pressable
             style={({ pressed }) => [
-              styles.optionCard,
-              styles.galleryCard,
+              styles.secondaryButton,
               { opacity: pressed ? 0.85 : 1 },
             ]}
             onPress={handleSelectImage}
-            disabled={status === 'loading'}
-            testID="choose-gallery-button"
           >
-            <View style={[styles.optionIconContainer, { backgroundColor: TEAL_BRIGHT }]}>
-              <MaterialIcons name="image" size={32} color={DARK_BG} />
-            </View>
-            <View style={styles.optionTextContainer}>
-              <ThemedText style={styles.optionTitle}>Choose from Gallery</ThemedText>
-              <ThemedText style={styles.optionDescription}>
-                Select a photo from your library
-              </ThemedText>
-            </View>
-            <MaterialIcons name="chevron-right" size={24} color={TEXT_SECONDARY} />
+            <ThemedText style={styles.secondaryButtonText}>Choose from Gallery</ThemedText>
           </Pressable>
         </View>
-
-        {/* Tips Card */}
-        <ThemedView style={[styles.card, { backgroundColor: cardBackground }]}>
-          <View style={styles.tipsHeader}>
-            <MaterialIcons name="info" size={20} color={TEAL_BRIGHT} />
-            <ThemedText type="defaultSemiBold">Tips for best results</ThemedText>
-          </View>
-          <ThemedText style={styles.tipText}>✓ Use good lighting (natural light is best)</ThemedText>
-          <ThemedText style={styles.tipText}>✓ Face the camera directly</ThemedText>
-          <ThemedText style={styles.tipText}>✓ Remove heavy makeup if possible</ThemedText>
-          <ThemedText style={styles.tipText}>✓ Keep your face centered in frame</ThemedText>
-          <ThemedText style={styles.tipText}>✓ Avoid shadows on your face</ThemedText>
-        </ThemedView>
-
-        {/* Selected Image Preview */}
-        {selectedImageUri && (
-          <ThemedView style={styles.previewContainer}>
-            <ThemedText type="subtitle">Captured photo</ThemedText>
-            <Image
-              source={{ uri: selectedImageUri }}
-              style={styles.previewImage}
-              contentFit="cover"
-            />
-          </ThemedView>
-        )}
-
-        {/* Loading State */}
-        {status === 'loading' && (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={tintColor} />
-            <ThemedText style={styles.loadingText}>
-              Analyzing your face health...
-            </ThemedText>
-            <ThemedText style={styles.loadingSubtext}>
-              This may take a few seconds
-            </ThemedText>
-          </View>
-        )}
-
-        {/* Error State */}
-        {status === 'error' && errorMessage && (
-          <ErrorBanner message={errorMessage} backgroundColor={errorBackground} />
-        )}
-
-        {/* Analysis Results */}
-        {status === 'success' && result && (
-          <AnalysisResult result={result} cardBackground={cardBackground} />
-        )}
-      </ScrollView>
+      )}
     </ThemedView>
   );
 }
 
-function AnalysisResult({
-  result,
-  cardBackground,
-}: {
-  result: FaceHealthAnalysis;
-  cardBackground: string;
-}) {
-  const {
-    healthScore,
-    skinType,
-    detectedIssues,
-    ageEstimate,
-    symmetryScore,
-    recommendations,
-  } = result;
+interface ScanningAnimationProps {
+  scanAnim: Animated.Value;
+  rotateAnim: Animated.Value;
+}
+
+function ScanningAnimation({ scanAnim, rotateAnim }: ScanningAnimationProps) {
+  const scanlinePosition = scanAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0%', '100%'],
+  });
+
+  const rotateZ = rotateAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
 
   return (
-    <ThemedView style={[styles.card, { backgroundColor: cardBackground }]}>
-      <ThemedText type="subtitle">Analysis results</ThemedText>
-      <View style={styles.metricsRow}>
-        <Metric label="Health score" value={formatNumber(healthScore, 0)} suffix="/100" />
-        <Metric label="Skin type" value={skinType ?? 'Unknown'} capitalize />
-        <Metric label="Age estimate" value={formatNumber(ageEstimate, 0)} suffix="yrs" />
-        <Metric label="Symmetry score" value={formatNumber(symmetryScore, 1)} suffix="/100" />
+    <View style={styles.scanningContainer}>
+      <View style={styles.scannerOverlay}>
+        <Animated.View
+          style={[
+            styles.scanningIcon,
+            {
+              transform: [{ rotate: rotateZ }],
+            },
+          ]}
+        >
+          <MaterialIcons name="center-focus-strong" size={60} color={TEAL_BRIGHT} />
+        </Animated.View>
+
+        <Animated.View
+          style={[
+            styles.scanline,
+            {
+              top: scanlinePosition,
+            },
+          ]}
+        />
+
+        <View style={styles.scanningCorners}>
+          <View style={[styles.corner, styles.topLeft]} />
+          <View style={[styles.corner, styles.topRight]} />
+          <View style={[styles.corner, styles.bottomLeft]} />
+          <View style={[styles.corner, styles.bottomRight]} />
+        </View>
       </View>
 
-      <Section title="Detected concerns">
-        {Array.isArray(detectedIssues) && detectedIssues.length > 0 ? (
-          detectedIssues.map((issue) => (
-            <ThemedText key={issue} style={styles.listItem}>
-              • {capitalizeText(issue)}
-            </ThemedText>
-          ))
-        ) : (
-          <ThemedText>No major concerns detected 🎉</ThemedText>
-        )}
-      </Section>
-
-      <Section title="Recommended routines">
-        <RecommendationList title="Morning routine" items={recommendations?.morningRoutine} />
-        <RecommendationList title="Night routine" items={recommendations?.nightRoutine} />
-      </Section>
-
-      <Section title="Suggested extras">
-        <RecommendationList title="Products" items={recommendations?.products} />
-        <RecommendationList title="Lifestyle tips" items={recommendations?.lifestyle} />
-        <RecommendationList title="Facial exercises" items={recommendations?.exercises} />
-      </Section>
-    </ThemedView>
-  );
-}
-
-function RecommendationList({
-  title,
-  items,
-}: {
-  title: string;
-  items?: string[];
-}) {
-  if (!Array.isArray(items) || items.length === 0) {
-    return null;
-  }
-
-  return (
-    <View style={styles.listBlock}>
-      <ThemedText type="defaultSemiBold">{title}</ThemedText>
-      {items.map((item, index) => (
-        <ThemedText key={`${title}-${index}`} style={styles.listItem}>
-          • {item}
-        </ThemedText>
-      ))}
-    </View>
-  );
-}
-
-function Metric({
-  label,
-  value,
-  suffix,
-  capitalize,
-}: {
-  label: string;
-  value: string;
-  suffix?: string;
-  capitalize?: boolean;
-}) {
-  return (
-    <View style={styles.metric}>
-      <ThemedText type="defaultSemiBold" style={styles.metricLabel}>
-        {label}
-      </ThemedText>
-      <ThemedText type="title" style={styles.metricValue}>
-        {capitalize ? capitalizeText(value) : value}
-        {suffix ? ` ${suffix}` : ''}
+      <ThemedText style={styles.scanningText}>Analyzing your skin...</ThemedText>
+      <ThemedText style={styles.scanningSubtext}>
+        Processing image with AI
       </ThemedText>
     </View>
   );
-}
-
-function Section({
-  title,
-  children,
-}: {
-  title: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <View style={styles.section}>
-      <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>
-        {title}
-      </ThemedText>
-      {children}
-    </View>
-  );
-}
-
-function ErrorBanner({ message, backgroundColor }: { message: string; backgroundColor: string }) {
-  return (
-    <ThemedView style={[styles.errorBanner, { backgroundColor }]}>
-      <ThemedText type="defaultSemiBold">Analysis failed</ThemedText>
-      <ThemedText>{message}</ThemedText>
-    </ThemedView>
-  );
-}
-
-function formatNumber(value: unknown, fractionDigits: number): string {
-  if (typeof value === 'number' && !Number.isNaN(value)) {
-    return value.toFixed(fractionDigits);
-  }
-
-  const parsed = Number(value);
-  if (!Number.isNaN(parsed)) {
-    return parsed.toFixed(fractionDigits);
-  }
-
-  return '—';
-}
-
-function capitalize(text: string): string {
-  return text.charAt(0).toUpperCase() + text.slice(1);
-}
-
-function capitalizeText(text: string): string {
-  return text
-    .split(' ')
-    .map((segment) => capitalize(segment))
-    .join(' ');
 }
 
 async function readFileAsBase64(uri: string): Promise<string> {
@@ -438,129 +328,183 @@ function blobToBase64(blob: Blob): Promise<string> {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  scrollContent: {
-    gap: 16,
-    padding: 20,
-    paddingBottom: 40,
+    backgroundColor: DARK_BG,
   },
   header: {
-    gap: 8,
-  },
-  optionsContainer: {
-    gap: 12,
-  },
-  optionCard: {
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    borderRadius: 16,
-    padding: 16,
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    gap: 16,
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 12,
   },
-  cameraCard: {
-    borderWidth: 1.5,
-    borderColor: TEAL_BRIGHT,
+  scrollContent: {
+    flexGrow: 1,
   },
-  galleryCard: {
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-  },
-  optionIconContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: 12,
+  content: {
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingTop: 24,
+    paddingBottom: 32,
     justifyContent: 'center',
     alignItems: 'center',
-    flexShrink: 0,
   },
-  optionTextContainer: {
-    flex: 1,
+  title: {
+    fontSize: 32,
+    fontWeight: '700',
+    color: TEXT_PRIMARY,
+    textAlign: 'center',
+    marginBottom: 12,
   },
-  optionTitle: {
+  subtitle: {
+    fontSize: 16,
+    color: TEXT_SECONDARY,
+    textAlign: 'center',
+    marginBottom: 40,
+    lineHeight: 24,
+  },
+  illustrationContainer: {
+    width: '100%',
+    aspectRatio: 1,
+    marginBottom: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  faceIllustration: {
+    width: '100%',
+    aspectRatio: 0.75,
+    backgroundColor: TEAL_MEDIUM,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    opacity: 0.3,
+  },
+  scanningContainer: {
+    alignItems: 'center',
+    gap: 24,
+    paddingVertical: 20,
+    width: '100%',
+  },
+  scannerOverlay: {
+    width: 240,
+    height: 320,
+    borderRadius: 20,
+    backgroundColor: `${TEAL_MEDIUM}15`,
+    borderWidth: 2,
+    borderColor: TEAL_BRIGHT,
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  scanningIcon: {
+    opacity: 0.8,
+  },
+  scanline: {
+    position: 'absolute',
+    width: '100%',
+    height: 3,
+    backgroundColor: TEAL_BRIGHT,
+    shadowColor: TEAL_BRIGHT,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  scanningCorners: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+  },
+  corner: {
+    position: 'absolute',
+    borderColor: TEAL_BRIGHT,
+    width: 30,
+    height: 30,
+  },
+  topLeft: {
+    top: 10,
+    left: 10,
+    borderTopWidth: 3,
+    borderLeftWidth: 3,
+  },
+  topRight: {
+    top: 10,
+    right: 10,
+    borderTopWidth: 3,
+    borderRightWidth: 3,
+  },
+  bottomLeft: {
+    bottom: 10,
+    left: 10,
+    borderBottomWidth: 3,
+    borderLeftWidth: 3,
+  },
+  bottomRight: {
+    bottom: 10,
+    right: 10,
+    borderBottomWidth: 3,
+    borderRightWidth: 3,
+  },
+  scanningText: {
     fontSize: 16,
     fontWeight: '600',
     color: TEXT_PRIMARY,
-    marginBottom: 4,
   },
-  optionDescription: {
+  scanningSubtext: {
     fontSize: 13,
     color: TEXT_SECONDARY,
-  },
-  card: {
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    borderRadius: 18,
-    padding: 20,
-    gap: 12,
-  },
-  tipsHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 8,
-  },
-  tipText: {
-    fontSize: 14,
-    color: TEXT_SECONDARY,
-    marginTop: 6,
-    lineHeight: 20,
-  },
-  previewContainer: {
-    gap: 12,
-  },
-  previewImage: {
-    width: '100%',
-    height: 320,
-    borderRadius: 18,
-  },
-  loadingContainer: {
-    alignItems: 'center',
-    gap: 12,
-    paddingVertical: 32,
-  },
-  loadingText: {
-    fontSize: 16,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  loadingSubtext: {
-    fontSize: 13,
-    opacity: 0.7,
-  },
-  metricsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 16,
-    justifyContent: 'space-between',
-  },
-  metric: {
-    minWidth: '45%',
-    gap: 4,
-  },
-  metricLabel: {
-    opacity: 0.7,
-  },
-  metricValue: {
-    fontSize: 24,
-  },
-  section: {
-    gap: 8,
-  },
-  sectionTitle: {
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    opacity: 0.7,
-  },
-  listBlock: {
-    gap: 6,
-  },
-  listItem: {
-    lineHeight: 20,
   },
   errorBanner: {
-    backgroundColor: 'rgba(255,85,85,0.12)',
-    borderRadius: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: 'rgba(239,68,68,0.15)',
+    borderRadius: 12,
     padding: 16,
+    marginBottom: 24,
+    borderLeftWidth: 4,
+    borderLeftColor: '#ef4444',
+  },
+  errorText: {
+    flex: 1,
+    fontSize: 14,
+    color: TEXT_PRIMARY,
+  },
+  buttonContainer: {
+    flexDirection: 'row',
+    gap: 12,
+    paddingHorizontal: 20,
+    paddingBottom: 24,
+  },
+  primaryButton: {
+    flex: 1,
+    backgroundColor: ACCENT_GREEN,
+    borderRadius: 16,
+    paddingVertical: 16,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
     gap: 8,
+  },
+  primaryButtonText: {
+    color: DARK_BG,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  secondaryButton: {
+    flex: 1,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 16,
+    paddingVertical: 16,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.1)',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  secondaryButtonText: {
+    color: TEXT_PRIMARY,
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
