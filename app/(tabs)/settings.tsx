@@ -13,16 +13,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
 import { ThemedText } from '@/components/themed-text';
-
-// Colors
-const DARK_BG = '#1a3a3f';
-const TEAL_PRIMARY = '#4a9b8e';
-const TEAL_BRIGHT = '#00d4ff';
-const TEAL_DARK = '#2a5a5f';
-const TEXT_PRIMARY = '#ffffff';
-const TEXT_SECONDARY = '#a0a0a0';
-const STATUS_LOW = '#ef4444';
-const DIVIDER = 'rgba(255,255,255,0.1)';
+import { useTheme } from '@/context/ThemeContext';
 
 interface Setting {
   id: string;
@@ -41,8 +32,8 @@ interface SettingsCategory {
 
 export default function SettingsScreen() {
   const router = useRouter();
+  const { isDarkMode, setIsDarkMode, theme } = useTheme();
   const [notifications, setNotifications] = useState(true);
-  const [darkMode, setDarkMode] = useState(true);
   const [dataCollection, setDataCollection] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [userName, setUserName] = useState('Olivia');
@@ -52,8 +43,13 @@ export default function SettingsScreen() {
     setNotifications(value);
   };
 
-  const handleDarkModeChange = (value: boolean) => {
-    setDarkMode(value);
+  const handleDarkModeChange = async (value: boolean) => {
+    await setIsDarkMode(value);
+    Alert.alert(
+      'Theme Changed',
+      `Switched to ${value ? 'Dark' : 'Light'} Mode`,
+      [{ text: 'OK' }]
+    );
   };
 
   const handleDataCollectionChange = (value: boolean) => {
@@ -140,10 +136,10 @@ export default function SettingsScreen() {
         {
           id: 'darkMode',
           title: 'Dark Mode',
-          description: 'Enable dark mode',
+          description: isDarkMode ? 'Disable dark mode' : 'Enable dark mode',
           type: 'toggle',
           icon: 'dark-mode',
-          value: darkMode,
+          value: isDarkMode,
         },
         {
           id: 'dataCollection',
@@ -206,7 +202,7 @@ export default function SettingsScreen() {
   ];
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.BG }]}>
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -214,18 +210,18 @@ export default function SettingsScreen() {
       >
         {/* Header */}
         <View style={styles.header}>
-          <ThemedText style={styles.headerTitle}>Settings</ThemedText>
+          <ThemedText style={[styles.headerTitle, { color: theme.TEXT_PRIMARY }]}>Settings</ThemedText>
         </View>
 
         {/* Profile Card */}
-        <View style={styles.profileCard}>
+        <View style={[styles.profileCard, { backgroundColor: theme.TEAL_DARK }]}>
           <View style={styles.profileContent}>
-            <View style={styles.profileAvatar}>
-              <MaterialIcons name="person" size={40} color={TEAL_BRIGHT} />
+            <View style={[styles.profileAvatar, { backgroundColor: `rgba(0, 212, 255, ${isDarkMode ? '0.2' : '0.15'})` }]}>
+              <MaterialIcons name="person" size={40} color={theme.TEAL_BRIGHT} />
             </View>
             <View style={styles.profileInfo}>
-              <ThemedText style={styles.profileName}>{userName}</ThemedText>
-              <ThemedText style={styles.profileEmail}>user@faceheal.ai</ThemedText>
+              <ThemedText style={[styles.profileName, { color: theme.TEXT_PRIMARY }]}>{userName}</ThemedText>
+              <ThemedText style={[styles.profileEmail, { color: theme.TEXT_SECONDARY }]}>user@faceheal.ai</ThemedText>
             </View>
           </View>
           <Pressable
@@ -235,23 +231,23 @@ export default function SettingsScreen() {
             ]}
             onPress={handleEditProfile}
           >
-            <MaterialIcons name="edit" size={20} color={TEAL_BRIGHT} />
+            <MaterialIcons name="edit" size={20} color={theme.TEAL_BRIGHT} />
           </Pressable>
         </View>
 
         {/* Settings Categories */}
         {settingsData.map((category, categoryIndex) => (
           <View key={categoryIndex} style={styles.categoryContainer}>
-            <ThemedText style={styles.categoryTitle}>{category.title}</ThemedText>
+            <ThemedText style={[styles.categoryTitle, { color: theme.TEAL_BRIGHT }]}>{category.title}</ThemedText>
 
-            <View style={styles.settingsGroup}>
+            <View style={[styles.settingsGroup, { backgroundColor: theme.TEAL_DARK }]}>
               {category.settings.map((setting, settingIndex) => (
                 <View key={setting.id}>
                   <Pressable
                     style={({ pressed }) => [
                       styles.settingItem,
                       {
-                        backgroundColor: pressed ? 'rgba(0, 212, 255, 0.1)' : 'transparent',
+                        backgroundColor: pressed ? `rgba(0, 212, 255, ${isDarkMode ? '0.1' : '0.05'})` : 'transparent',
                       },
                     ]}
                     onPress={() => {
@@ -260,19 +256,19 @@ export default function SettingsScreen() {
                       } else if (setting.id === 'notifications') {
                         handleNotificationChange(!notifications);
                       } else if (setting.id === 'darkMode') {
-                        handleDarkModeChange(!darkMode);
+                        handleDarkModeChange(!isDarkMode);
                       } else if (setting.id === 'dataCollection') {
                         handleDataCollectionChange(!dataCollection);
                       }
                     }}
                   >
                     <View style={styles.settingLeft}>
-                      <View style={styles.settingIconContainer}>
-                        <MaterialIcons name={setting.icon as any} size={24} color={TEAL_BRIGHT} />
+                      <View style={[styles.settingIconContainer, { backgroundColor: `rgba(0, 212, 255, ${isDarkMode ? '0.15' : '0.1'})` }]}>
+                        <MaterialIcons name={setting.icon as any} size={24} color={theme.TEAL_BRIGHT} />
                       </View>
                       <View style={styles.settingContent}>
-                        <ThemedText style={styles.settingTitle}>{setting.title}</ThemedText>
-                        <ThemedText style={styles.settingDescription}>
+                        <ThemedText style={[styles.settingTitle, { color: theme.TEXT_PRIMARY }]}>{setting.title}</ThemedText>
+                        <ThemedText style={[styles.settingDescription, { color: theme.TEXT_SECONDARY }]}>
                           {setting.description}
                         </ThemedText>
                       </View>
@@ -290,21 +286,21 @@ export default function SettingsScreen() {
                             handleDataCollectionChange(value);
                           }
                         }}
-                        trackColor={{ false: TEAL_DARK, true: TEAL_PRIMARY }}
-                        thumbColor={TEAL_BRIGHT}
+                        trackColor={{ false: theme.TEAL_DARK, true: theme.TEAL_PRIMARY }}
+                        thumbColor={theme.TEAL_BRIGHT}
                       />
                     )}
                     {setting.type === 'button' && (
                       <MaterialIcons
                         name="chevron-right"
                         size={24}
-                        color={TEXT_SECONDARY}
+                        color={theme.TEXT_SECONDARY}
                       />
                     )}
                   </Pressable>
 
                   {settingIndex < category.settings.length - 1 && (
-                    <View style={styles.divider} />
+                    <View style={[styles.divider, { backgroundColor: theme.DIVIDER }]} />
                   )}
                 </View>
               ))}
@@ -321,8 +317,8 @@ export default function SettingsScreen() {
             ]}
             onPress={handleLogout}
           >
-            <MaterialIcons name="logout" size={20} color="#ffffff" />
-            <ThemedText style={styles.logoutButtonText}>Logout</ThemedText>
+            <MaterialIcons name="logout" size={20} color={isDarkMode ? '#ffffff' : '#000000'} />
+            <ThemedText style={[styles.logoutButtonText, { color: isDarkMode ? '#ffffff' : '#000000' }]}>Logout</ThemedText>
           </Pressable>
         </View>
 
@@ -338,50 +334,50 @@ export default function SettingsScreen() {
         onRequestClose={() => setModalVisible(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+          <View style={[styles.modalContent, { backgroundColor: theme.BG }]}>
             <View style={styles.modalHeader}>
-              <ThemedText style={styles.modalTitle}>Edit Profile</ThemedText>
+              <ThemedText style={[styles.modalTitle, { color: theme.TEXT_PRIMARY }]}>Edit Profile</ThemedText>
               <Pressable onPress={() => setModalVisible(false)}>
-                <MaterialIcons name="close" size={28} color={TEXT_PRIMARY} />
+                <MaterialIcons name="close" size={28} color={theme.TEXT_PRIMARY} />
               </Pressable>
             </View>
 
             <View style={styles.modalBody}>
-              <ThemedText style={styles.inputLabel}>Full Name</ThemedText>
+              <ThemedText style={[styles.inputLabel, { color: theme.TEXT_PRIMARY }]}>Full Name</ThemedText>
               <TextInput
-                style={styles.textInput}
+                style={[styles.textInput, { backgroundColor: theme.TEAL_DARK, color: theme.TEXT_PRIMARY, borderColor: `rgba(0, 212, 255, ${isDarkMode ? '0.2' : '0.1'})` }]}
                 value={editName}
                 onChangeText={setEditName}
-                placeholderTextColor={TEXT_SECONDARY}
+                placeholderTextColor={theme.TEXT_SECONDARY}
                 placeholder="Enter your name"
               />
 
-              <ThemedText style={styles.inputLabel}>Email</ThemedText>
+              <ThemedText style={[styles.inputLabel, { color: theme.TEXT_PRIMARY }]}>Email</ThemedText>
               <TextInput
-                style={[styles.textInput, styles.disabledInput]}
+                style={[styles.textInput, styles.disabledInput, { backgroundColor: theme.TEAL_DARK, color: theme.TEXT_PRIMARY, borderColor: `rgba(0, 212, 255, ${isDarkMode ? '0.2' : '0.1'})` }]}
                 value="user@faceheal.ai"
                 editable={false}
-                placeholderTextColor={TEXT_SECONDARY}
+                placeholderTextColor={theme.TEXT_SECONDARY}
               />
 
               <View style={styles.modalButtonGroup}>
                 <Pressable
                   style={({ pressed }) => [
                     styles.cancelButton,
-                    { opacity: pressed ? 0.85 : 1 },
+                    { opacity: pressed ? 0.85 : 1, backgroundColor: theme.TEAL_DARK, borderColor: `rgba(0, 212, 255, ${isDarkMode ? '0.2' : '0.1'})` },
                   ]}
                   onPress={() => setModalVisible(false)}
                 >
-                  <ThemedText style={styles.cancelButtonText}>Cancel</ThemedText>
+                  <ThemedText style={[styles.cancelButtonText, { color: theme.TEAL_BRIGHT }]}>Cancel</ThemedText>
                 </Pressable>
                 <Pressable
                   style={({ pressed }) => [
                     styles.saveButton,
-                    { opacity: pressed ? 0.85 : 1 },
+                    { opacity: pressed ? 0.85 : 1, backgroundColor: theme.TEAL_BRIGHT },
                   ]}
                   onPress={handleSaveName}
                 >
-                  <ThemedText style={styles.saveButtonText}>Save</ThemedText>
+                  <ThemedText style={[styles.saveButtonText, { color: isDarkMode ? '#1a3a3f' : '#f5f5f5' }]}>Save</ThemedText>
                 </Pressable>
               </View>
             </View>
@@ -395,7 +391,6 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: DARK_BG,
   },
   scrollView: {
     flex: 1,
@@ -411,10 +406,8 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 32,
     fontWeight: '700',
-    color: TEXT_PRIMARY,
   },
   profileCard: {
-    backgroundColor: TEAL_DARK,
     borderRadius: 16,
     padding: 16,
     marginBottom: 28,
@@ -442,12 +435,10 @@ const styles = StyleSheet.create({
   profileName: {
     fontSize: 18,
     fontWeight: '600',
-    color: TEXT_PRIMARY,
     marginBottom: 4,
   },
   profileEmail: {
     fontSize: 14,
-    color: TEXT_SECONDARY,
   },
   editButton: {
     padding: 8,
@@ -458,13 +449,11 @@ const styles = StyleSheet.create({
   categoryTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: TEAL_BRIGHT,
     marginBottom: 12,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   settingsGroup: {
-    backgroundColor: TEAL_DARK,
     borderRadius: 12,
     overflow: 'hidden',
   },
@@ -495,16 +484,13 @@ const styles = StyleSheet.create({
   settingTitle: {
     fontSize: 15,
     fontWeight: '600',
-    color: TEXT_PRIMARY,
     marginBottom: 2,
   },
   settingDescription: {
     fontSize: 13,
-    color: TEXT_SECONDARY,
   },
   divider: {
     height: 1,
-    backgroundColor: DIVIDER,
     marginHorizontal: 16,
   },
   logoutContainer: {
@@ -512,7 +498,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   logoutButton: {
-    backgroundColor: STATUS_LOW,
+    backgroundColor: '#ef4444',
     borderRadius: 12,
     paddingVertical: 16,
     flexDirection: 'row',
@@ -523,7 +509,6 @@ const styles = StyleSheet.create({
   logoutButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#ffffff',
   },
   bottomPadding: {
     height: 20,
@@ -534,7 +519,6 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: DARK_BG,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     padding: 24,
@@ -549,7 +533,6 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 22,
     fontWeight: '700',
-    color: TEXT_PRIMARY,
   },
   modalBody: {
     marginBottom: 20,
@@ -557,19 +540,15 @@ const styles = StyleSheet.create({
   inputLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: TEXT_PRIMARY,
     marginBottom: 8,
   },
   textInput: {
-    backgroundColor: TEAL_DARK,
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    color: TEXT_PRIMARY,
     fontSize: 16,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: 'rgba(0, 212, 255, 0.2)',
   },
   disabledInput: {
     opacity: 0.6,
@@ -581,21 +560,17 @@ const styles = StyleSheet.create({
   },
   cancelButton: {
     flex: 1,
-    backgroundColor: TEAL_DARK,
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(0, 212, 255, 0.2)',
   },
   cancelButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: TEAL_BRIGHT,
   },
   saveButton: {
     flex: 1,
-    backgroundColor: TEAL_BRIGHT,
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',
@@ -603,6 +578,5 @@ const styles = StyleSheet.create({
   saveButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: DARK_BG,
   },
 });

@@ -6,8 +6,10 @@ import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { ThemeToggle } from '@/components/theme-toggle';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useTheme } from '@/context/ThemeContext';
 import { FaceHealthAnalysis } from '@/src/services/gemini.service';
 import { scanStorage } from '@/src/services/storage.service';
 
@@ -24,6 +26,7 @@ const STATUS_CRITICAL = '#ef4444';
 
 export default function AnalysisScreen() {
   const router = useRouter();
+  const { theme } = useTheme();
   const colorScheme = useColorScheme();
   const themeKey = colorScheme ?? 'light';
   const params = useLocalSearchParams();
@@ -109,16 +112,16 @@ export default function AnalysisScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Header with back button */}
-        <View style={styles.header}>
-          <Pressable
-            style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
-            onPress={handleGoBack}
-          >
-            <MaterialIcons name="arrow-back" size={24} color={TEXT_PRIMARY} />
-          </Pressable>
-          <ThemedText style={styles.headerTitle}>Face Health Analysis</ThemedText>
-          <View style={{ width: 24 }} />
-        </View>
+         <View style={styles.header}>
+           <Pressable
+             style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
+             onPress={handleGoBack}
+           >
+             <MaterialIcons name="arrow-back" size={24} color={theme.TEXT_PRIMARY} />
+           </Pressable>
+           <ThemedText style={styles.headerTitle}>Face Health Analysis</ThemedText>
+           <ThemeToggle />
+         </View>
 
         {/* Image Preview */}
         {imageUri && (

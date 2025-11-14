@@ -22,8 +22,10 @@ import { MaterialIcons } from "@expo/vector-icons";
 
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { Colors } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
+import { useTheme } from "@/context/ThemeContext";
 import {
   analyzeFaceHealth,
   analyzeDeepScan,
@@ -36,16 +38,18 @@ type Status = "idle" | "loading" | "success" | "error";
 type ViewMode = "menu" | "camera";
 type ScanMode = "standard" | "deep";
 
+const ACCENT_GREEN = "#00d97d";
 const DARK_BG = "#1a3a3f";
+const TEAL_PRIMARY = "#4a9b8e";
 const TEAL_BRIGHT = "#00d4ff";
 const TEAL_DARK = "#2a5a5f";
-const TEAL_MEDIUM = "#4a9b8e";
+const TEAL_MEDIUM = "#3a7a6f";
 const TEXT_PRIMARY = "#ffffff";
 const TEXT_SECONDARY = "#a0a0a0";
-const ACCENT_GREEN = "#00d97d";
 
 export default function ScanScreen() {
   const router = useRouter();
+  const { isDarkMode, theme } = useTheme();
   const [status, setStatus] = useState<Status>("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [result, setResult] = useState<
@@ -199,21 +203,24 @@ export default function ScanScreen() {
   return (
     <ThemedView style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <Pressable onPress={() => router.back()} hitSlop={10}>
-          <MaterialIcons name="close" size={28} color={TEXT_PRIMARY} />
-        </Pressable>
-        <Pressable
-          onPress={() =>
-            Alert.alert(
-              "Help",
-              "Tips: Make sure your face is fully visible and well-lit."
-            )
-          }
-          hitSlop={10}
-        >
-          <MaterialIcons name="help-outline" size={28} color={TEXT_PRIMARY} />
-        </Pressable>
+      <View style={[styles.header, { backgroundColor: theme.BG }]}>
+         <Pressable onPress={() => router.back()} hitSlop={10}>
+           <MaterialIcons name="close" size={28} color={theme.TEXT_PRIMARY} />
+         </Pressable>
+         <View style={styles.headerRight}>
+           <ThemeToggle />
+           <Pressable
+             onPress={() =>
+               Alert.alert(
+                 "Help",
+                 "Tips: Make sure your face is fully visible and well-lit."
+               )
+             }
+             hitSlop={10}
+           >
+             <MaterialIcons name="help-outline" size={28} color={theme.TEXT_PRIMARY} />
+           </Pressable>
+         </View>
       </View>
 
       <ScrollView
@@ -236,7 +243,7 @@ export default function ScanScreen() {
           ) : (
             <View style={styles.illustrationContainer}>
               <View style={styles.faceIllustration}>
-                <MaterialIcons name="face" size={120} color={TEAL_BRIGHT} />
+                <MaterialIcons name="face" size={120} color={theme.TEAL_BRIGHT} />
               </View>
             </View>
           )}
@@ -384,6 +391,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 16,
     paddingBottom: 12,
+  },
+  headerRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
   },
   scrollContent: {
     flexGrow: 1,

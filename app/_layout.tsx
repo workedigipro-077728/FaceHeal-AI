@@ -7,6 +7,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import 'react-native-reanimated';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { ThemeProvider as CustomThemeProvider } from '@/context/ThemeContext';
 
 const ONBOARDING_KEY = 'onboarding_completed';
 
@@ -56,49 +57,51 @@ export default function RootLayout() {
   }, [rootNavigationState?.key, isOnboarded]);
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen
-          name="onboarding"
-          options={{
-            headerShown: false,
-            animationEnabled: false,
-            gestureEnabled: false,
-          }}
-        />
-        <Stack.Screen
-          name="auth"
-          options={{
-            headerShown: false,
-            animationEnabled: true,
-            gestureEnabled: false,
-          }}
-        />
-        <Stack.Screen
-          name="payment"
-          options={{
-            headerShown: false,
-            animationEnabled: true,
-            gestureEnabled: false,
-          }}
-        />
-        <Stack.Screen
-          name="(tabs)"
-          options={{
-            headerShown: false,
-            animationEnabled: true,
-            gestureEnabled: true,
-          }}
-        />
-        <Stack.Screen
-          name="modal"
-          options={{
-            presentation: 'modal',
-            headerShown: false,
-          }}
-        />
-      </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
+    <CustomThemeProvider>
+      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen
+            name="onboarding"
+            options={{
+              headerShown: false,
+              animationEnabled: false,
+              gestureEnabled: false,
+            }}
+          />
+          <Stack.Screen
+            name="auth"
+            options={{
+              headerShown: false,
+              animationEnabled: true,
+              gestureEnabled: false,
+            }}
+          />
+          <Stack.Screen
+            name="payment"
+            options={{
+              headerShown: false,
+              animationEnabled: true,
+              gestureEnabled: false,
+            }}
+          />
+          <Stack.Screen
+            name="(tabs)"
+            options={{
+              headerShown: false,
+              animationEnabled: true,
+              gestureEnabled: true,
+            }}
+          />
+          <Stack.Screen
+            name="modal"
+            options={{
+              presentation: 'modal',
+              headerShown: false,
+            }}
+          />
+        </Stack>
+        <StatusBar style="auto" />
+      </ThemeProvider>
+    </CustomThemeProvider>
   );
 }

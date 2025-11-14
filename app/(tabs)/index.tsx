@@ -4,19 +4,17 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter, useFocusEffect } from 'expo-router';
 
 import { ThemedText } from '@/components/themed-text';
+import { ThemeToggle } from '@/components/theme-toggle';
 import { scanStorage, StoredScanData } from '@/src/services/storage.service';
 import { FaceHealthAnalysis } from '@/src/services/gemini.service';
+import { useTheme } from '@/context/ThemeContext';
 
-// Colors
-const DARK_BG = '#1a3a3f';
-const TEAL_PRIMARY = '#4a9b8e';
-const TEAL_BRIGHT = '#00d4ff';
-const TEAL_DARK = '#2a5a5f';
-const TEXT_PRIMARY = '#ffffff';
-const TEXT_SECONDARY = '#a0a0a0';
+// Status Colors (same for both modes)
 const STATUS_GOOD = '#4ade80';
 const STATUS_FAIR = '#fbbf24';
 const STATUS_LOW = '#ef4444';
+const TEAL_BRIGHT = '#00d4ff';
+const TEXT_SECONDARY = '#a0a0a0';
 
 interface Metric {
   id: string;
@@ -56,6 +54,7 @@ const defaultMetrics: Metric[] = [
 
 export default function HomeScreen() {
   const router = useRouter();
+  const { isDarkMode, theme } = useTheme();
   const [expandedTip, setExpandedTip] = useState(false);
   const [scanData, setScanData] = useState<StoredScanData | null>(null);
   const [scanImage, setScanImage] = useState<string | null>(null);
@@ -136,7 +135,7 @@ export default function HomeScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.BG }]}>
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -146,38 +145,41 @@ export default function HomeScreen() {
         <View style={styles.header}>
           <View style={styles.avatarContainer}>
             <View style={styles.avatar}>
-              <MaterialIcons name="person" size={32} color={TEAL_BRIGHT} />
+              <MaterialIcons name="person" size={32} color={theme.TEAL_BRIGHT} />
             </View>
           </View>
-          <Pressable
-            style={({ pressed }) => [
-              styles.notificationButton,
-              { opacity: pressed ? 0.7 : 1 },
-            ]}
-            onPress={handleNotification}
-          >
-            <MaterialIcons name="notifications-none" size={24} color={TEXT_PRIMARY} />
-          </Pressable>
+          <View style={styles.headerRight}>
+            <ThemeToggle />
+            <Pressable
+              style={({ pressed }) => [
+                styles.notificationButton,
+                { opacity: pressed ? 0.7 : 1 },
+              ]}
+              onPress={handleNotification}
+            >
+              <MaterialIcons name="notifications-none" size={24} color={theme.TEXT_PRIMARY} />
+            </Pressable>
+          </View>
         </View>
 
         {/* Greeting */}
-        <ThemedText style={styles.greeting}>Good Morning, {userName}</ThemedText>
+        <ThemedText style={[styles.greeting, { color: theme.TEXT_PRIMARY }]}>Good Morning, {userName}</ThemedText>
 
         {/* Face Health Score Card */}
-        <View style={styles.scoreCard}>
+        <View style={[styles.scoreCard, { backgroundColor: theme.TEAL_DARK }]}>
           <View style={styles.scoreHeader}>
             <View>
-              <ThemedText style={styles.scoreTitle}>Your Face Health Score</ThemedText>
-              <ThemedText style={styles.scoreSubtitle}>
+              <ThemedText style={[styles.scoreTitle, { color: theme.TEXT_PRIMARY }]}>Your Face Health Score</ThemedText>
+              <ThemedText style={[styles.scoreSubtitle, { color: theme.TEXT_SECONDARY }]}>
                 {healthScore > 0
                   ? `Based on your latest scan.`
                   : 'Start a scan to see your results.'}
               </ThemedText>
             </View>
             <View style={styles.scoreDisplay}>
-              <ThemedText style={styles.scoreNumber}>{Math.round(healthScore)}</ThemedText>
-              <ThemedText style={styles.scoreMax}>/100</ThemedText>
-            </View>
+               <ThemedText style={[styles.scoreNumber, { color: theme.TEAL_BRIGHT }]}>{Math.round(healthScore)}</ThemedText>
+               <ThemedText style={[styles.scoreMax, { color: theme.TEXT_SECONDARY }]}>/100</ThemedText>
+             </View>
           </View>
 
           {/* Progress Bar */}
@@ -197,35 +199,35 @@ export default function HomeScreen() {
           {/* Buttons */}
           <View style={styles.buttonGroup}>
             <Pressable
-              style={({ pressed }) => [
-                styles.scanButton,
-                { opacity: pressed ? 0.85 : 1 },
-              ]}
-              onPress={handleStartScan}
-            >
-              <ThemedText style={styles.scanButtonText}>
-                {healthScore > 0 ? 'Rescan' : 'Start Scan'}
-              </ThemedText>
-            </Pressable>
+               style={({ pressed }) => [
+                 styles.scanButton,
+                 { opacity: pressed ? 0.85 : 1, backgroundColor: theme.TEAL_BRIGHT },
+               ]}
+               onPress={handleStartScan}
+             >
+               <ThemedText style={[styles.scanButtonText, { color: theme.BG }]}>
+                 {healthScore > 0 ? 'Rescan' : 'Start Scan'}
+               </ThemedText>
+             </Pressable>
 
-            {healthScore > 0 && (
-              <Pressable
-                style={({ pressed }) => [
-                  styles.viewResultsButton,
-                  { opacity: pressed ? 0.85 : 1 },
-                ]}
-                onPress={handleAnalysisView}
-              >
-                <ThemedText style={styles.viewResultsButtonText}>View Results</ThemedText>
-              </Pressable>
-            )}
+             {healthScore > 0 && (
+               <Pressable
+                 style={({ pressed }) => [
+                   styles.viewResultsButton,
+                   { opacity: pressed ? 0.85 : 1, borderColor: theme.TEAL_BRIGHT },
+                 ]}
+                 onPress={handleAnalysisView}
+               >
+                 <ThemedText style={[styles.viewResultsButtonText, { color: theme.TEAL_BRIGHT }]}>View Results</ThemedText>
+               </Pressable>
+             )}
           </View>
         </View>
 
         {/* Scan Data Metrics */}
         {scanData && (
-          <View style={styles.scanDataCard}>
-            <ThemedText style={styles.scanDataTitle}>Latest Scan Summary</ThemedText>
+          <View style={[styles.scanDataCard, { backgroundColor: theme.TEAL_DARK }]}>
+            <ThemedText style={[styles.scanDataTitle, { color: theme.TEXT_PRIMARY }]}>Latest Scan Summary</ThemedText>
             <View style={styles.scanMetricsGrid}>
               <MetricBadge
                 label="Skin Type"
@@ -258,10 +260,10 @@ export default function HomeScreen() {
             </View>
 
             {scanData.detectedIssues && scanData.detectedIssues.length > 0 && (
-              <View style={styles.issuesBox}>
-                <ThemedText style={styles.issuesLabel}>Detected Issues:</ThemedText>
+              <View style={[styles.issuesBox, { backgroundColor: `${STATUS_LOW}${isDarkMode ? '15' : '25'}` }]}>
+                <ThemedText style={[styles.issuesLabel, { color: theme.TEXT_PRIMARY }]}>Detected Issues:</ThemedText>
                 {scanData.detectedIssues.slice(0, 3).map((issue, index) => (
-                  <ThemedText key={index} style={styles.issueItem}>
+                  <ThemedText key={index} style={[styles.issueItem, { color: theme.TEXT_SECONDARY }]}>
                     • {issue}
                   </ThemedText>
                 ))}
@@ -271,45 +273,45 @@ export default function HomeScreen() {
         )}
 
         {/* Daily Tip Card */}
-        <View style={styles.tipCard}>
+        <View style={[styles.tipCard, { backgroundColor: theme.TEAL_DARK }]}>
           <View style={styles.tipHeader}>
-            <View style={styles.tipIconContainer}>
-              <MaterialIcons name="spa" size={20} color={TEAL_BRIGHT} />
+            <View style={[styles.tipIconContainer, { backgroundColor: `rgba(0, 212, 255, ${isDarkMode ? '0.15' : '0.1'})` }]}>
+              <MaterialIcons name="spa" size={20} color={theme.TEAL_BRIGHT} />
             </View>
-            <ThemedText style={styles.tipTitle}>Daily Facial Health Tip</ThemedText>
+            <ThemedText style={[styles.tipTitle, { color: theme.TEXT_PRIMARY }]}>Daily Facial Health Tip</ThemedText>
           </View>
 
-          <ThemedText style={styles.tipText}>
+          <ThemedText style={[styles.tipText, { color: theme.TEXT_SECONDARY }]}>
             Did you know? Consistent, gentle patting motions when applying moisturizer can boost
             circulation and enhance product absorption without stressing the skin.
           </ThemedText>
 
           <Pressable
-            style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
-            onPress={() => setExpandedTip(!expandedTip)}
-          >
-            <ThemedText style={styles.readMore}>Read More</ThemedText>
-          </Pressable>
-        </View>
+             style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
+             onPress={() => setExpandedTip(!expandedTip)}
+           >
+             <ThemedText style={[styles.readMore, { color: theme.TEAL_BRIGHT }]}>Read More</ThemedText>
+           </Pressable>
+          </View>
 
-        {/* Key Metrics Section */}
-        <View>
-          <ThemedText style={styles.metricsTitle}>Key Metrics</ThemedText>
+          {/* Key Metrics Section */}
+          <View>
+           <ThemedText style={[styles.metricsTitle, { color: theme.TEXT_PRIMARY }]}>Key Metrics</ThemedText>
 
           <View style={styles.metricsContainer}>
             {metrics.map((metric) => (
               <View key={metric.id} style={styles.metricCard}>
-                <View style={styles.metricIconContainer}>
+                <View style={[styles.metricIconContainer, { backgroundColor: theme.TEAL_DARK }]}>
                   <MaterialIcons
                     name={metric.icon as any}
                     size={24}
-                    color={TEAL_BRIGHT}
+                    color={theme.TEAL_BRIGHT}
                   />
                 </View>
 
                 <View style={styles.metricContent}>
-                  <ThemedText style={styles.metricTitle}>{metric.title}</ThemedText>
-                  <ThemedText style={styles.metricDescription}>{metric.description}</ThemedText>
+                  <ThemedText style={[styles.metricTitle, { color: theme.TEXT_PRIMARY }]}>{metric.title}</ThemedText>
+                  <ThemedText style={[styles.metricDescription, { color: theme.TEXT_SECONDARY }]}>{metric.description}</ThemedText>
                 </View>
 
                 <ThemedText
@@ -323,20 +325,20 @@ export default function HomeScreen() {
               </View>
             ))}
           </View>
-        </View>
+          </View>
 
         {/* Top Recommendation Card */}
-        <View style={styles.recommendationCard}>
+        <View style={[styles.recommendationCard, { backgroundColor: theme.TEAL_DARK }]}>
           <View style={styles.recommendationHeader}>
-            <View style={styles.recommendationIconContainer}>
+            <View style={[styles.recommendationIconContainer, { backgroundColor: `rgba(251, 191, 36, ${isDarkMode ? '0.15' : '0.1'})` }]}>
               <MaterialIcons name="lightbulb" size={24} color="#fbbf24" />
             </View>
-            <ThemedText style={styles.recommendationTitle}>
+            <ThemedText style={[styles.recommendationTitle, { color: theme.TEXT_PRIMARY }]}>
               Today's Top Recommendation
             </ThemedText>
           </View>
 
-          <ThemedText style={styles.recommendationText}>
+          <ThemedText style={[styles.recommendationText, { color: theme.TEXT_SECONDARY }]}>
             {scanData?.detectedIssues && scanData.detectedIssues.length > 0
               ? `To address ${scanData.detectedIssues[0].toLowerCase()}, follow the detailed recommendations in your analysis.`
               : 'To address the slight redness, try a calming serum with Niacinamide. It can help strengthen your skin barrier and reduce inflammation.'}
@@ -373,7 +375,6 @@ function MetricBadge({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: DARK_BG,
   },
   scrollView: {
     flex: 1,
@@ -392,6 +393,11 @@ const styles = StyleSheet.create({
   avatarContainer: {
     flex: 1,
   },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   avatar: {
     width: 56,
     height: 56,
@@ -406,11 +412,9 @@ const styles = StyleSheet.create({
   greeting: {
     fontSize: 28,
     fontWeight: '700',
-    color: TEXT_PRIMARY,
     marginBottom: 24,
   },
   scoreCard: {
-    backgroundColor: TEAL_DARK,
     borderRadius: 16,
     padding: 24,
     marginBottom: 20,
@@ -424,12 +428,10 @@ const styles = StyleSheet.create({
   scoreTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: TEXT_PRIMARY,
     marginBottom: 4,
   },
   scoreSubtitle: {
     fontSize: 14,
-    color: TEXT_SECONDARY,
   },
   scoreDisplay: {
     flexDirection: 'row',
@@ -439,11 +441,9 @@ const styles = StyleSheet.create({
   scoreNumber: {
     fontSize: 48,
     fontWeight: '700',
-    color: TEAL_BRIGHT,
   },
   scoreMax: {
     fontSize: 16,
-    color: TEXT_SECONDARY,
   },
   progressBarContainer: {
     height: 6,
@@ -463,13 +463,11 @@ const styles = StyleSheet.create({
   },
   scanButton: {
     flex: 1,
-    backgroundColor: TEAL_BRIGHT,
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
   },
   scanButtonText: {
-    color: DARK_BG,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -478,17 +476,14 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: TEAL_BRIGHT,
     paddingVertical: 14,
     alignItems: 'center',
   },
   viewResultsButtonText: {
-    color: TEAL_BRIGHT,
     fontSize: 14,
     fontWeight: '600',
   },
   scanDataCard: {
-    backgroundColor: TEAL_DARK,
     borderRadius: 16,
     padding: 20,
     marginBottom: 20,
@@ -496,7 +491,6 @@ const styles = StyleSheet.create({
   scanDataTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: TEXT_PRIMARY,
     marginBottom: 16,
   },
   scanMetricsGrid: {
@@ -516,17 +510,14 @@ const styles = StyleSheet.create({
   },
   metricBadgeLabel: {
     fontSize: 11,
-    color: TEXT_SECONDARY,
     marginTop: 8,
   },
   metricBadgeValue: {
     fontSize: 16,
     fontWeight: '700',
-    color: TEXT_PRIMARY,
     marginTop: 4,
   },
   issuesBox: {
-    backgroundColor: `${STATUS_LOW}15`,
     borderRadius: 12,
     padding: 12,
     borderLeftWidth: 4,
@@ -535,16 +526,13 @@ const styles = StyleSheet.create({
   issuesLabel: {
     fontSize: 12,
     fontWeight: '600',
-    color: TEXT_PRIMARY,
     marginBottom: 8,
   },
   issueItem: {
     fontSize: 12,
-    color: TEXT_SECONDARY,
     marginBottom: 4,
   },
   tipCard: {
-    backgroundColor: TEAL_DARK,
     borderRadius: 16,
     padding: 20,
     marginBottom: 24,
@@ -559,30 +547,25 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 12,
-    backgroundColor: 'rgba(0, 212, 255, 0.15)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   tipTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: TEXT_PRIMARY,
   },
   tipText: {
     fontSize: 14,
-    color: TEXT_SECONDARY,
     lineHeight: 20,
     marginBottom: 12,
   },
   readMore: {
     fontSize: 14,
-    color: TEAL_BRIGHT,
     fontWeight: '600',
   },
   metricsTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: TEXT_PRIMARY,
     marginBottom: 16,
   },
   metricsContainer: {
@@ -598,7 +581,6 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 12,
-    backgroundColor: TEAL_DARK,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -608,19 +590,16 @@ const styles = StyleSheet.create({
   metricTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: TEXT_PRIMARY,
     marginBottom: 2,
   },
   metricDescription: {
     fontSize: 12,
-    color: TEXT_SECONDARY,
   },
   metricStatus: {
     fontSize: 14,
     fontWeight: '600',
   },
   recommendationCard: {
-    backgroundColor: TEAL_DARK,
     borderRadius: 16,
     padding: 20,
   },
@@ -634,18 +613,15 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 12,
-    backgroundColor: 'rgba(251, 191, 36, 0.15)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   recommendationTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: TEXT_PRIMARY,
   },
   recommendationText: {
     fontSize: 14,
-    color: TEXT_SECONDARY,
     lineHeight: 20,
   },
   bottomPadding: {
