@@ -33,6 +33,89 @@ Respond strictly in JSON format like this:
   }
 }`;
 
+const DEEP_SCAN_PROMPT = `You are an expert dermatologist and cosmetic specialist. Perform a comprehensive, detailed analysis of the provided face image. This is a DEEP SCAN analysis.
+
+Analyze in extreme detail:
+1. **Overall Health Score** (0–100)
+2. **Comprehensive Skin Assessment**:
+   - Texture analysis (roughness, smoothness, pore size distribution)
+   - Pigmentation issues (spots, uneven tone, discoloration)
+   - Hydration level (dehydrated, normal, oily)
+   - Elasticity and firmness assessment
+   - Visible skin conditions (acne, rosacea, eczema, psoriasis)
+
+3. **Regional Analysis**:
+   - Forehead condition
+   - T-zone (nose and between eyebrows)
+   - Cheeks condition
+   - Jawline and chin
+   - Under-eye area (dark circles, puffiness, fine lines)
+   - Lip area
+
+4. **Fine Lines & Wrinkles**:
+   - Location and severity of each wrinkle type
+   - Expression lines vs static wrinkles
+   - Preventative measures
+
+5. **Advanced Metrics**:
+   - Facial symmetry score (0-100)
+   - Skin elasticity rating
+   - Estimated biological age vs chronological appearance
+   - UV damage assessment
+   - Inflammation level
+
+6. **Detailed Recommendations**:
+   - Specific skincare products with ingredients
+   - Professional treatments recommended
+   - Preventative care plan
+   - Lifestyle modifications
+   - Facial exercises and massage techniques
+   - Dietary recommendations
+   - Sleep and hydration guidance
+
+7. **Risk Factors & Concerns**:
+   - Identified risk areas
+   - Prevention strategies
+   - When to see a dermatologist
+
+Respond strictly in JSON format:
+{
+  "healthScore": number,
+  "skinType": string,
+  "detectedIssues": string[],
+  "ageEstimate": number,
+  "symmetryScore": number,
+  "elasticityScore": number,
+  "uvDamageLevel": string,
+  "inflationLevel": string,
+  "regionalAnalysis": {
+    "forehead": string,
+    "tZone": string,
+    "cheeks": string,
+    "jawline": string,
+    "underEye": string,
+    "lips": string
+  },
+  "wrinkleAnalysis": {
+    "severity": string,
+    "types": string[],
+    "locations": string[],
+    "preventionTips": string[]
+  },
+  "riskFactors": string[],
+  "recommendations": {
+    "morningRoutine": string[],
+    "nightRoutine": string[],
+    "products": string[],
+    "ingredients": string[],
+    "professionalTreatments": string[],
+    "lifestyle": string[],
+    "exercises": string[],
+    "diet": string[],
+    "dermatologistTips": string[]
+  }
+}`;
+
 const DEFAULT_IMAGE_MIME_TYPE = "image/jpeg";
 
 export interface FaceHealthRecommendations {
@@ -51,6 +134,33 @@ export interface FaceHealthAnalysis {
   symmetryScore: number;
   recommendations: FaceHealthRecommendations;
   [key: string]: unknown;
+}
+
+export interface DeepScanAnalysis extends FaceHealthAnalysis {
+  elasticityScore?: number;
+  uvDamageLevel?: string;
+  inflationLevel?: string;
+  regionalAnalysis?: {
+    forehead?: string;
+    tZone?: string;
+    cheeks?: string;
+    jawline?: string;
+    underEye?: string;
+    lips?: string;
+  };
+  wrinkleAnalysis?: {
+    severity?: string;
+    types?: string[];
+    locations?: string[];
+    preventionTips?: string[];
+  };
+  riskFactors?: string[];
+  recommendations: FaceHealthRecommendations & {
+    ingredients?: string[];
+    professionalTreatments?: string[];
+    diet?: string[];
+    dermatologistTips?: string[];
+  };
 }
 
 export type AnalyzeFaceHealthParams = {
@@ -115,6 +225,56 @@ export async function analyzeFaceHealth({
   } catch (error) {
     const normalizedError = normalizeGeminiError(error);
     console.error("❌ API Error:", normalizedError);
+    throw normalizedError;
+  }
+}
+
+export async function analyzeDeepScan({
+  imageBase64,
+  mimeType = DEFAULT_IMAGE_MIME_TYPE,
+}: AnalyzeFaceHealthParams): Promise<DeepScanAnalysis> {
+  if (!imageBase64) {
+    throw new Error(
+      "analyzeDeepScan requires a base64 encoded image (without data URI prefix)."
+    );
+  }
+
+  if (!env.geminiApiKey) {
+    throw new Error(
+      "Gemini API key is missing. Set EXPO_PUBLIC_GEMINI_API_KEY in your environment."
+    );
+  }
+
+  try {
+    const requestBody = {
+      contents: [
+        {
+          parts: [
+            { text: DEEP_SCAN_PROMPT },
+            {
+              inline_data: {
+                mime_type: mimeType,
+                data: imageBase64,
+              },
+            },
+          ],
+        },
+      ],
+    };
+
+    const response = await axios.post(
+      `${GEMINI_API_URL}?key=${env.geminiApiKey}`,
+      requestBody,
+      { headers: { "Content-Type": "application/json" } }
+    );
+
+    const rawText = extractCandidateText(response.data);
+    const sanitized = sanitizeJsonResponse(rawText);
+
+    return JSON.parse(sanitized) as DeepScanAnalysis;
+  } catch (error) {
+    const normalizedError = normalizeGeminiError(error);
+    console.error("❌ Deep Scan API Error:", normalizedError);
     throw normalizedError;
   }
 }
