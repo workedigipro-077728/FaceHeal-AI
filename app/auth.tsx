@@ -15,7 +15,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 
 import { ThemedText } from '@/components/themed-text';
 import { useAuth } from '@/context/authContext';
-import { signIn, signUp, resetPassword, signInWithGoogle } from '@/services/supabase';
+import { signIn, signUp, resetPassword, signInWithGoogle } from '@/services/firebase';
 
 // Colors
 const DARK_BG = '#0f172a';

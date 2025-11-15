@@ -1,10 +1,16 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { Session, User } from '@supabase/supabase-js';
-import { supabase } from '@/services/supabase';
+import { getCurrentUser } from '@/services/firebase';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+interface User {
+  uid: string;
+  email: string;
+  idToken: string;
+  refreshToken: string;
+}
 
 interface AuthContextType {
   user: User | null;
-  session: Session | null;
   loading: boolean;
   error: string | null;
 }
@@ -13,18 +19,18 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Get initial session
-    const getInitialSession = async () => {
+    // Get initial user
+    const getInitialUser = async () => {
       try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        if (error) throw error;
-        setSession(session);
-        setUser(session?.user ?? null);
+        const { user, error } = await getCurrentUser();
+        if (error) {
+          console.error('Error getting current user:', error);
+        }
+        setUser(user || null);
       } catch (err: any) {
         setError(err.message);
       } finally {
@@ -32,25 +38,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     };
 
-    getInitialSession();
+    getInitialUser();
 
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('Auth state changed:', event, session?.user?.email);
-        setSession(session);
-        setUser(session?.user ?? null);
-        setLoading(false);
+    // Listen for storage changes
+    const checkAuthState = async () => {
+      try {
+        const userString = await AsyncStorage.getItem('firebase_user');
+        if (userString) {
+          const userData = JSON.parse(userString);
+          setUser(userData);
+          console.log('Auth state changed: User logged in');
+        } else {
+          setUser(null);
+          console.log('Auth state changed: User logged out');
+        }
+      } catch (err) {
+        console.error('Error checking auth state:', err);
       }
-    );
+    };
+
+    // Check auth state periodically
+    const interval = setInterval(checkAuthState, 1000);
 
     return () => {
-      subscription?.unsubscribe();
+      clearInterval(interval);
     };
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, error }}>
+    <AuthContext.Provider value={{ user, loading, error }}>
       {children}
     </AuthContext.Provider>
   );

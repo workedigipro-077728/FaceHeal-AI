@@ -15,7 +15,7 @@ import { useRouter } from 'expo-router';
 
 import { ThemedText } from '@/components/themed-text';
 import { useTheme } from '@/context/ThemeContext';
-import { supabase } from '@/services/supabase';
+import { signOut } from '@/services/firebase';
 
 interface Setting {
   id: string;
@@ -97,30 +97,21 @@ export default function SettingsScreen() {
           
           setIsLoggingOut(true);
           try {
-            console.log('🔐 Starting logout process...');
+            console.log('🔐 Starting logout process with Firebase...');
             
-            // Call Supabase signOut directly
-            const { error } = await supabase.auth.signOut();
+            // Call Firebase signOut
+            const { error } = await signOut();
             
-            console.log('🔐 Supabase signOut result:', { error });
+            console.log('🔐 Firebase signOut result:', { error });
             
             if (error) {
-              console.error('🔐 Logout error from Supabase:', error);
+              console.error('🔐 Logout error from Firebase:', error);
               setIsLoggingOut(false);
-              Alert.alert('Error', 'Failed to logout: ' + error.message);
+              Alert.alert('Error', 'Failed to logout: ' + error);
               return;
             }
             
-            console.log('🔐 Logout successful, clearing storage and navigating...');
-            
-            // Clear all auth-related storage
-            await Promise.all([
-              supabase.auth.getSession().then(async ({ data }) => {
-                if (!data?.session) {
-                  console.log('🔐 Session cleared successfully');
-                }
-              }),
-            ]);
+            console.log('🔐 Logout successful, navigating to auth...');
             
             // Navigate after a small delay
             setTimeout(() => {
