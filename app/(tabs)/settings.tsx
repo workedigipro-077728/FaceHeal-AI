@@ -8,12 +8,14 @@ import {
   Alert,
   Modal,
   TextInput,
+  ActivityIndicator,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
 import { ThemedText } from '@/components/themed-text';
 import { useTheme } from '@/context/ThemeContext';
+import { supabase } from '@/services/supabase';
 
 interface Setting {
   id: string;
@@ -38,6 +40,7 @@ export default function SettingsScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [userName, setUserName] = useState('Olivia');
   const [editName, setEditName] = useState('Olivia');
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const handleNotificationChange = (value: boolean) => {
     setNotifications(value);
@@ -89,9 +92,47 @@ export default function SettingsScreen() {
       { text: 'Cancel', onPress: () => {} },
       {
         text: 'Logout',
-        onPress: () => {
-          // TODO: Implement logout logic
-          router.push('/auth');
+        onPress: async () => {
+          if (isLoggingOut) return;
+          
+          setIsLoggingOut(true);
+          try {
+            console.log('🔐 Starting logout process...');
+            
+            // Call Supabase signOut directly
+            const { error } = await supabase.auth.signOut();
+            
+            console.log('🔐 Supabase signOut result:', { error });
+            
+            if (error) {
+              console.error('🔐 Logout error from Supabase:', error);
+              setIsLoggingOut(false);
+              Alert.alert('Error', 'Failed to logout: ' + error.message);
+              return;
+            }
+            
+            console.log('🔐 Logout successful, clearing storage and navigating...');
+            
+            // Clear all auth-related storage
+            await Promise.all([
+              supabase.auth.getSession().then(async ({ data }) => {
+                if (!data?.session) {
+                  console.log('🔐 Session cleared successfully');
+                }
+              }),
+            ]);
+            
+            // Navigate after a small delay
+            setTimeout(() => {
+              console.log('🔐 Navigating to /auth');
+              router.replace('/auth');
+            }, 300);
+            
+          } catch (err: any) {
+            console.error('🔐 Logout exception:', err);
+            setIsLoggingOut(false);
+            Alert.alert('Error', 'Exception during logout: ' + (err.message || 'Unknown error'));
+          }
         },
         style: 'destructive',
       },
@@ -313,12 +354,19 @@ export default function SettingsScreen() {
           <Pressable
             style={({ pressed }) => [
               styles.logoutButton,
-              { opacity: pressed ? 0.85 : 1 },
+              { opacity: pressed && !isLoggingOut ? 0.85 : 1 },
             ]}
             onPress={handleLogout}
+            disabled={isLoggingOut}
           >
-            <MaterialIcons name="logout" size={20} color={isDarkMode ? '#ffffff' : '#000000'} />
-            <ThemedText style={[styles.logoutButtonText, { color: isDarkMode ? '#ffffff' : '#000000' }]}>Logout</ThemedText>
+            {isLoggingOut ? (
+              <ActivityIndicator color={isDarkMode ? '#ffffff' : '#000000'} size="small" />
+            ) : (
+              <>
+                <MaterialIcons name="logout" size={20} color={isDarkMode ? '#ffffff' : '#000000'} />
+                <ThemedText style={[styles.logoutButtonText, { color: isDarkMode ? '#ffffff' : '#000000' }]}>Logout</ThemedText>
+              </>
+            )}
           </Pressable>
         </View>
 

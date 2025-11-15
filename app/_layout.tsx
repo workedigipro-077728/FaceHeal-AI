@@ -9,6 +9,7 @@ import 'react-native-reanimated';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { ThemeProvider as CustomThemeProvider } from '@/context/ThemeContext';
 import { RoutineProvider } from '@/context/RoutineContext';
+import { AuthProvider } from '@/context/authContext';
 
 const ONBOARDING_KEY = 'onboarding_completed';
 
@@ -58,49 +59,51 @@ export default function RootLayout() {
   }, [rootNavigationState?.key, isOnboarded]);
 
   return (
-    <CustomThemeProvider>
-      <RoutineProvider>
-        <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-          <Stack screenOptions={{ headerShown: false }}>
-            <Stack.Screen
-              name="onboarding"
-              options={{
-                headerShown: false,
-                gestureEnabled: false,
-              }}
-            />
-            <Stack.Screen
-              name="auth"
-              options={{
-                headerShown: false,
-                gestureEnabled: false,
-              }}
-            />
-            <Stack.Screen
-              name="payment"
-              options={{
-                headerShown: false,
-                gestureEnabled: false,
-              }}
-            />
-            <Stack.Screen
-              name="(tabs)"
-              options={{
-                headerShown: false,
-                gestureEnabled: true,
-              }}
-            />
-            <Stack.Screen
-              name="modal"
-              options={{
-                presentation: 'modal',
-                headerShown: false,
-              }}
-            />
-          </Stack>
-          <StatusBar style="auto" />
-        </ThemeProvider>
-      </RoutineProvider>
-    </CustomThemeProvider>
+    <AuthProvider>
+      <CustomThemeProvider>
+        <RoutineProvider>
+          <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+            <Stack screenOptions={{ headerShown: false }}>
+              <Stack.Screen
+                name="onboarding"
+                options={{
+                  headerShown: false,
+                  gestureEnabled: false,
+                }}
+              />
+              <Stack.Screen
+                name="auth"
+                options={{
+                  headerShown: false,
+                  gestureEnabled: false,
+                }}
+              />
+              <Stack.Screen
+                name="payment"
+                options={{
+                  headerShown: false,
+                  gestureEnabled: false,
+                }}
+              />
+              <Stack.Screen
+                name="(tabs)"
+                options={{
+                  headerShown: false,
+                  gestureEnabled: true,
+                }}
+              />
+              <Stack.Screen
+                name="modal"
+                options={{
+                  presentation: 'modal',
+                  headerShown: false,
+                }}
+              />
+            </Stack>
+            <StatusBar style="auto" />
+          </ThemeProvider>
+        </RoutineProvider>
+      </CustomThemeProvider>
+    </AuthProvider>
   );
-}
+  }

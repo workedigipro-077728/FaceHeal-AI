@@ -9,7 +9,7 @@ interface OnboardingProgressProps {
   totalSteps: number;
 }
 
-export function OnboardingProgress({ currentStep, totalSteps }: OnboardingProgressProps) {
+function OnboardingProgress({ currentStep, totalSteps }: OnboardingProgressProps) {
   const progressColor = useThemeColor(
     { light: '#0a7ea4', dark: '#fff' },
     'tint'
@@ -50,27 +50,29 @@ export function OnboardingProgress({ currentStep, totalSteps }: OnboardingProgre
   );
 }
 
+export default OnboardingProgress;
+
 const styles = StyleSheet.create({
-  container: {
-    gap: 12,
-    marginBottom: 32,
-  },
-  progressBarContainer: {
-    width: '100%',
-  },
-  progressBar: {
-    height: 4,
-    borderRadius: 2,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    borderRadius: 2,
-  },
-  progressText: {
-    fontSize: 14,
-    opacity: 0.6,
-    textAlign: 'center',
-  },
+   container: {
+     gap: 12,
+     marginBottom: 32,
+   },
+   progressBarContainer: {
+     width: '100%',
+   },
+   progressBar: {
+     height: 4,
+     borderRadius: 2,
+     overflow: 'hidden',
+   },
+   progressFill: {
+     height: '100%',
+     borderRadius: 2,
+   },
+   progressText: {
+     fontSize: 14,
+     opacity: 0.6,
+     textAlign: 'center',
+   },
 });
 
