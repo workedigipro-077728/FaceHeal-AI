@@ -118,3 +118,194 @@ export const signInWithGoogle = async () => {
     return { data: null, error: error.message };
   }
 };
+
+// ==================== USER DATA FUNCTIONS ====================
+
+// User Profile
+export const createUserProfile = async (userId: string, profileData: any) => {
+  try {
+    const { data, error } = await supabase
+      .from('user_profiles')
+      .insert([{
+        user_id: userId,
+        ...profileData,
+      }])
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return { data, error: null };
+  } catch (error: any) {
+    return { data: null, error: error.message };
+  }
+};
+
+export const getUserProfile = async (userId: string) => {
+  try {
+    const { data, error } = await supabase
+      .from('user_profiles')
+      .select('*')
+      .eq('user_id', userId)
+      .single();
+    
+    if (error && error.code !== 'PGRST116') throw error; // PGRST116 = no rows
+    return { data, error: null };
+  } catch (error: any) {
+    return { data: null, error: error.message };
+  }
+};
+
+export const updateUserProfile = async (userId: string, updates: any) => {
+  try {
+    const { data, error } = await supabase
+      .from('user_profiles')
+      .update(updates)
+      .eq('user_id', userId)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return { data, error: null };
+  } catch (error: any) {
+    return { data: null, error: error.message };
+  }
+};
+
+// Skin Scans
+export const uploadSkinScan = async (userId: string, imageFile: File, analysisData: any) => {
+  try {
+    // Upload image to storage
+    const fileName = `${userId}/${Date.now()}.jpg`;
+    const { error: uploadError } = await supabase
+      .storage
+      .from('skin-scans')
+      .upload(fileName, imageFile, { upsert: false });
+    
+    if (uploadError) throw uploadError;
+
+    // Get public URL
+    const { data: { publicUrl } } = supabase
+      .storage
+      .from('skin-scans')
+      .getPublicUrl(fileName);
+
+    // Save scan record
+    const { data, error } = await supabase
+      .from('skin_scans')
+      .insert([{
+        user_id: userId,
+        image_url: publicUrl,
+        ...analysisData,
+      }])
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return { data, error: null };
+  } catch (error: any) {
+    return { data: null, error: error.message };
+  }
+};
+
+export const getSkinScans = async (userId: string) => {
+  try {
+    const { data, error } = await supabase
+      .from('skin_scans')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+    
+    if (error) throw error;
+    return { data, error: null };
+  } catch (error: any) {
+    return { data: null, error: error.message };
+  }
+};
+
+// Onboarding Data
+export const saveOnboardingData = async (userId: string, onboardingData: any) => {
+  try {
+    const { data, error } = await supabase
+      .from('onboarding_data')
+      .insert([{
+        user_id: userId,
+        ...onboardingData,
+        completed_at: new Date().toISOString(),
+      }])
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return { data, error: null };
+  } catch (error: any) {
+    return { data: null, error: error.message };
+  }
+};
+
+export const getOnboardingData = async (userId: string) => {
+  try {
+    const { data, error } = await supabase
+      .from('onboarding_data')
+      .select('*')
+      .eq('user_id', userId)
+      .single();
+    
+    if (error && error.code !== 'PGRST116') throw error;
+    return { data, error: null };
+  } catch (error: any) {
+    return { data: null, error: error.message };
+  }
+};
+
+// User Pictures
+export const uploadUserPicture = async (userId: string, imageFile: File, category: string) => {
+  try {
+    const fileName = `${userId}/${Date.now()}.jpg`;
+    const { error: uploadError } = await supabase
+      .storage
+      .from('user-pictures')
+      .upload(fileName, imageFile, { upsert: false });
+    
+    if (uploadError) throw uploadError;
+
+    const { data: { publicUrl } } = supabase
+      .storage
+      .from('user-pictures')
+      .getPublicUrl(fileName);
+
+    const { data, error } = await supabase
+      .from('user_pictures')
+      .insert([{
+        user_id: userId,
+        picture_url: publicUrl,
+        category,
+      }])
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return { data, error: null };
+  } catch (error: any) {
+    return { data: null, error: error.message };
+  }
+};
+
+export const getUserPictures = async (userId: string, category?: string) => {
+  try {
+    let query = supabase
+      .from('user_pictures')
+      .select('*')
+      .eq('user_id', userId);
+    
+    if (category) {
+      query = query.eq('category', category);
+    }
+    
+    const { data, error } = await query.order('created_at', { ascending: false });
+    
+    if (error) throw error;
+    return { data, error: null };
+  } catch (error: any) {
+    return { data: null, error: error.message };
+  }
+};

@@ -1,18 +1,13 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { getCurrentUser } from '@/services/firebase';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-
-interface User {
-  uid: string;
-  email: string;
-  idToken: string;
-  refreshToken: string;
-}
+import { User } from 'firebase/auth';
+import { auth, registerUser, loginUser, logoutUser, onAuthChange } from '../services/firebase';
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  error: string | null;
+  signup: (email: string, password: string) => Promise<User>;
+  signin: (email: string, password: string) => Promise<User>;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -20,53 +15,30 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Get initial user
-    const getInitialUser = async () => {
-      try {
-        const { user, error } = await getCurrentUser();
-        if (error) {
-          console.error('Error getting current user:', error);
-        }
-        setUser(user || null);
-      } catch (err: any) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
+    const unsubscribe = onAuthChange((currentUser) => {
+      setUser(currentUser);
+      setLoading(false);
+    });
 
-    getInitialUser();
-
-    // Listen for storage changes
-    const checkAuthState = async () => {
-      try {
-        const userString = await AsyncStorage.getItem('firebase_user');
-        if (userString) {
-          const userData = JSON.parse(userString);
-          setUser(userData);
-          console.log('Auth state changed: User logged in');
-        } else {
-          setUser(null);
-          console.log('Auth state changed: User logged out');
-        }
-      } catch (err) {
-        console.error('Error checking auth state:', err);
-      }
-    };
-
-    // Check auth state periodically
-    const interval = setInterval(checkAuthState, 1000);
-
-    return () => {
-      clearInterval(interval);
-    };
+    return unsubscribe;
   }, []);
 
+  const signup = async (email: string, password: string) => {
+    return await registerUser(email, password);
+  };
+
+  const signin = async (email: string, password: string) => {
+    return await loginUser(email, password);
+  };
+
+  const logout = async () => {
+    await logoutUser();
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, error }}>
+    <AuthContext.Provider value={{ user, loading, signup, signin, logout }}>
       {children}
     </AuthContext.Provider>
   );
@@ -75,7 +47,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth must be used within AuthProvider');
+    throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
 };

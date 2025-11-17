@@ -1,169 +1,308 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { initializeApp, getApps, getApp } from "firebase/app";
+import {
+  getAuth,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signOut as firebaseSignOut,
+  onAuthStateChanged,
+  Auth,
+  User,
+  sendPasswordResetEmail,
+  browserLocalPersistence,
+  setPersistence,
+  GoogleAuthProvider,
+  signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
+} from "firebase/auth";
+import { getFirestore } from "firebase/firestore";
+import { FEATURE_FLAGS } from "@/config/featureFlags";
 
-// Firebase configuration - Update with your Firebase project credentials
-const FIREBASE_CONFIG = {
-  apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY || '',
-  authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN || '',
-  projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID || '',
-  storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET || '',
-  messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || '',
-  appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID || '',
+// Your Firebase configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyC86nmWcJuhu7B871hLO3fJKNYCnenGYh0",
+  authDomain: "healface-ai-pt.firebaseapp.com",
+  projectId: "healface-ai-pt",
+  storageBucket: "healface-ai-pt.firebasestorage.app",
+  messagingSenderId: "867337291458",
+  appId: "1:867337291458:web:e233d243c9fbae40f4dd5b",
 };
 
-// Firebase Auth handlers
-let currentUser: any = null;
+// Initialize Firebase - Ensure this runs synchronously
+let app;
+let auth: Auth;
 
-// Initialize auth state listener
-const initializeAuthListener = (callback: (user: any) => void) => {
-  // This will be replaced with actual Firebase implementation
-  const user = AsyncStorage.getItem('firebase_user').then((data) => {
-    if (data) {
-      currentUser = JSON.parse(data);
-      callback(currentUser);
-    }
+if (getApps().length === 0) {
+  app = initializeApp(firebaseConfig);
+}
+
+app = app || getApp();
+
+try {
+  auth = getAuth(app);
+  // Set persistence to LOCAL for web
+  setPersistence(auth, browserLocalPersistence).catch((error) => {
+    console.warn("Persistence setting error (this is OK):", error);
   });
+} catch (error) {
+  // Auth already initialized, this is OK
+  auth = getAuth(app);
+}
+
+export { auth };
+export const db = getFirestore(app);
+
+// Helper function to handle errors
+const getErrorMessage = (error: any): string => {
+  const errorCode = error.code || "";
+  const errorMap: { [key: string]: string } = {
+    "auth/email-already-in-use": "Email is already in use",
+    "auth/invalid-email": "Invalid email address",
+    "auth/weak-password": "Password is too weak (minimum 6 characters)",
+    "auth/user-not-found": "User not found",
+    "auth/wrong-password": "Incorrect password",
+    "auth/invalid-credential": "Invalid credentials",
+    "auth/operation-not-allowed": "Operation not allowed",
+    "auth/too-many-requests":
+      "Too many failed login attempts. Try again later.",
+    "auth/network-request-failed":
+      "Network error. Check your internet connection.",
+  };
+  return errorMap[errorCode] || error.message || "An error occurred";
 };
 
 // Sign Up
 export const signUp = async (email: string, password: string) => {
+  if (!FEATURE_FLAGS.ENABLE_EMAIL_AUTH) {
+    return { data: null, error: "Email authentication is currently disabled" };
+  }
+
   try {
-    const response = await fetch(
-      `https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${FIREBASE_CONFIG.apiKey}`,
-      {
-        method: 'POST',
-        body: JSON.stringify({
-          email,
-          password,
-          returnSecureToken: true,
-        }),
-      }
+    const userCredential = await createUserWithEmailAndPassword(
+      auth,
+      email,
+      password
     );
-
-    const data = await response.json();
-
-    if (data.error) {
-      return { data: null, error: data.error.message };
-    }
-
-    // Save user info
-    const user = {
-      uid: data.localId,
-      email: data.email,
-      idToken: data.idToken,
-      refreshToken: data.refreshToken,
-    };
-
-    await AsyncStorage.setItem('firebase_user', JSON.stringify(user));
-    currentUser = user;
-
-    return { data: user, error: null };
+    return { data: userCredential.user, error: null };
   } catch (error: any) {
-    return { data: null, error: error.message };
+    console.error("Sign up error:", error);
+    return { data: null, error: getErrorMessage(error) };
   }
 };
 
 // Sign In
 export const signIn = async (email: string, password: string) => {
+  if (!FEATURE_FLAGS.ENABLE_EMAIL_AUTH) {
+    return { data: null, error: "Email authentication is currently disabled" };
+  }
+
   try {
-    const response = await fetch(
-      `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${FIREBASE_CONFIG.apiKey}`,
-      {
-        method: 'POST',
-        body: JSON.stringify({
-          email,
-          password,
-          returnSecureToken: true,
-        }),
-      }
+    const userCredential = await signInWithEmailAndPassword(
+      auth,
+      email,
+      password
     );
-
-    const data = await response.json();
-
-    if (data.error) {
-      return { data: null, error: data.error.message };
-    }
-
-    // Save user info
-    const user = {
-      uid: data.localId,
-      email: data.email,
-      idToken: data.idToken,
-      refreshToken: data.refreshToken,
-    };
-
-    await AsyncStorage.setItem('firebase_user', JSON.stringify(user));
-    currentUser = user;
-
-    return { data: user, error: null };
+    return { data: userCredential.user, error: null };
   } catch (error: any) {
-    return { data: null, error: error.message };
+    console.error("Sign in error:", error);
+    return { data: null, error: getErrorMessage(error) };
   }
 };
 
 // Sign Out
 export const signOut = async () => {
   try {
-    await AsyncStorage.removeItem('firebase_user');
-    currentUser = null;
+    await firebaseSignOut(auth);
     return { error: null };
   } catch (error: any) {
-    return { error: error.message };
-  }
-};
-
-// Get Current User
-export const getCurrentUser = async () => {
-  try {
-    const userString = await AsyncStorage.getItem('firebase_user');
-    if (userString) {
-      currentUser = JSON.parse(userString);
-      return { user: currentUser, error: null };
-    }
-    currentUser = null;
-    return { user: null, error: null };
-  } catch (error: any) {
-    return { user: null, error: error.message };
+    console.error("Sign out error:", error);
+    return { error: getErrorMessage(error) };
   }
 };
 
 // Reset Password
 export const resetPassword = async (email: string) => {
+  if (!FEATURE_FLAGS.ENABLE_PASSWORD_RESET) {
+    return { error: "Password reset is currently disabled" };
+  }
+
   try {
-    const response = await fetch(
-      `https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key=${FIREBASE_CONFIG.apiKey}`,
-      {
-        method: 'POST',
-        body: JSON.stringify({
-          email,
-          requestType: 'PASSWORD_RESET',
-        }),
+    await sendPasswordResetEmail(auth, email);
+    return { error: null };
+  } catch (error: any) {
+    console.error("Reset password error:", error);
+    return { error: getErrorMessage(error) };
+  }
+};
+
+// Google Sign In/Sign Up
+export const signInWithGoogle = async () => {
+  if (!FEATURE_FLAGS.ENABLE_GOOGLE_AUTH) {
+    return { data: null, error: "Google authentication is currently disabled" };
+  }
+
+  try {
+    const provider = new GoogleAuthProvider();
+
+    // Configure scopes
+    provider.addScope("profile");
+    provider.addScope("email");
+
+    // Set custom parameters for optimal UX
+    provider.setCustomParameters({
+      prompt: "consent", // Always show account selection
+    });
+
+    // Check if we're handling a redirect
+    try {
+      const redirectResult = await getRedirectResult(auth);
+      if (redirectResult) {
+        console.log("Google sign-in successful via redirect");
+        return { data: redirectResult.user, error: null };
       }
-    );
-
-    const data = await response.json();
-
-    if (data.error) {
-      return { data: null, error: data.error.message };
+    } catch (redirectError: any) {
+      console.warn("Redirect result error:", redirectError);
+      // Continue with popup attempt
     }
 
-    return { data, error: null };
+    // Try popup first (better UX for web)
+    try {
+      const result = await signInWithPopup(auth, provider);
+      console.log("Google sign-in successful via popup");
+      return { data: result.user, error: null };
+    } catch (popupError: any) {
+      // Handle specific popup errors
+      if (
+        popupError.code === "auth/popup-blocked" ||
+        popupError.code === "auth/popup-closed-by-user"
+      ) {
+        console.log("Popup blocked/closed, using redirect flow");
+        await signInWithRedirect(auth, provider);
+        // Redirect will reload the page, return null
+        return { data: null, error: null };
+      } else if (popupError.code === "auth/cancelled-popup-request") {
+        return { data: null, error: "Sign-in was cancelled" };
+      }
+      throw popupError;
+    }
   } catch (error: any) {
-    return { data: null, error: error.message };
+    console.error("Google sign-in error:", error);
+    return { data: null, error: getErrorMessage(error) };
   }
 };
 
-// Sign in with Google
-export const signInWithGoogle = async () => {
+// Handle Google redirect result (call this on app startup/page load)
+export const handleGoogleRedirectResult = async () => {
   try {
-    // For Expo, you would use expo-auth-session or similar
-    // This is a placeholder that needs proper implementation
+    const result = await getRedirectResult(auth);
+    if (result) {
+      console.log("Handling Google redirect result");
+      return { data: result.user, error: null };
+    }
+    return { data: null, error: null };
+  } catch (error: any) {
+    console.error("Google redirect result error:", error);
+    return { data: null, error: getErrorMessage(error) };
+  }
+};
+
+// Register User (legacy)
+export const registerUser = async (email: string, password: string) => {
+  try {
+    const userCredential = await createUserWithEmailAndPassword(
+      auth,
+      email,
+      password
+    );
+    return userCredential.user;
+  } catch (error) {
+    console.error("Register error:", error);
+    throw error;
+  }
+};
+
+// Login User (legacy)
+export const loginUser = async (email: string, password: string) => {
+  try {
+    const userCredential = await signInWithEmailAndPassword(
+      auth,
+      email,
+      password
+    );
+    return userCredential.user;
+  } catch (error) {
+    console.error("Login error:", error);
+    throw error;
+  }
+};
+
+// Logout User (legacy)
+export const logoutUser = async () => {
+  try {
+    await firebaseSignOut(auth);
+  } catch (error) {
+    console.error("Logout error:", error);
+    throw error;
+  }
+};
+
+// On Auth Change
+export const onAuthChange = (callback: (user: User | null) => void) => {
+  const unsubscribe = onAuthStateChanged(auth, (user) => {
+    callback(user);
+  });
+  return unsubscribe;
+};
+
+// Save Scan Data and Generate Personalized Plan
+export const saveScanDataAndGeneratePlan = async (
+  userId: string,
+  scanData: any,
+  analysisData: any
+) => {
+  try {
+    const { collection, doc, setDoc, Timestamp } = await import(
+      "firebase/firestore"
+    );
+
+    const scanDocData = {
+      userId,
+      scanData: {
+        skinType: analysisData?.skinType || scanData?.skinType,
+        healthScore: analysisData?.healthScore || 0,
+        detectedIssues: analysisData?.detectedIssues || [],
+        hydration:
+          scanData?.hydration || analysisData?.skinCondition?.hydration,
+        acne: scanData?.acne || 0,
+        oiliness: scanData?.oiliness || 0,
+        ageEstimate: analysisData?.ageEstimate || 0,
+        symmetryScore: analysisData?.symmetryScore || 0,
+        recommendations: analysisData?.recommendations || {},
+      },
+      timestamp: Timestamp.now(),
+      createdAt: new Date().toISOString(),
+    };
+
+    // Save to Firestore
+    const scansRef = collection(db, "users", userId, "scans");
+    const scanRef = doc(scansRef);
+    await setDoc(scanRef, scanDocData);
+
     return {
-      data: null,
-      error: 'Google Sign-In requires additional setup with expo-auth-session',
+      success: true,
+      scanId: scanRef.id,
+      data: scanDocData,
+      error: null,
     };
   } catch (error: any) {
-    return { data: null, error: error.message };
+    console.error("Error saving scan data:", error);
+    return {
+      success: false,
+      scanId: null,
+      data: null,
+      error: getErrorMessage(error),
+    };
   }
 };
 
-export { FIREBASE_CONFIG, currentUser };
+export default app;

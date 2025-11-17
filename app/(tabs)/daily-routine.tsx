@@ -36,7 +36,7 @@ export default function DailyRoutineScreen() {
   const colors = Colors[colorScheme ?? 'light'];
   const isDark = colorScheme === 'dark';
   const router = useRouter();
-  const { routines: routinesTasks, toggleTask, scanData } = useRoutine();
+  const { routines: routinesTasks, toggleTask, scanData, analysisData } = useRoutine();
 
   const [waterIntake, setWaterIntake] = useState(1200); // in ml
   const dailyGoal = 2000; // in ml
@@ -108,36 +108,67 @@ export default function DailyRoutineScreen() {
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} style={styles.scrollView}>
-        {/* Scan Data Card */}
-        {scanData && (
-          <View
-            style={[
-              styles.scanDataCard,
-              { backgroundColor: isDark ? '#1a1a1a' : '#f0f8ff' },
-            ]}
-          >
-            <View style={styles.scanDataHeader}>
-              <Ionicons name="flask-sharp" size={20} color="#4a7c99" />
-              <Text
-                style={[styles.scanDataTitle, { color: colors.text }]}
-              >
-                Latest Scan Results
-              </Text>
-            </View>
-            <Text
-              style={[styles.scanDataContent, { color: colors.icon }]}
-            >
-              {getScanDataDisplay()}
-            </Text>
-            {scanData.recommendation && (
-              <Text
-                style={[styles.scanDataRecommendation, { color: colors.icon }]}
-              >
-                {scanData.recommendation}
-              </Text>
-            )}
-          </View>
-        )}
+         {/* Analysis Data Card (Personalized Plan) */}
+         {analysisData && (
+           <View
+             style={[
+               styles.scanDataCard,
+               { backgroundColor: isDark ? '#1a1a1a' : '#e8f5e9' },
+             ]}
+           >
+             <View style={styles.scanDataHeader}>
+               <Ionicons name="spark" size={20} color="#4caf50" />
+               <Text
+                 style={[styles.scanDataTitle, { color: colors.text }]}
+               >
+                 Personalized Plan
+               </Text>
+             </View>
+             <Text
+               style={[styles.scanDataContent, { color: colors.icon }]}
+             >
+               {`Skin Type: ${analysisData.skinType || 'Not detected'} • Health Score: ${analysisData.healthScore || 0}/100`}
+             </Text>
+             {analysisData.detectedIssues && analysisData.detectedIssues.length > 0 && (
+               <Text
+                 style={[styles.scanDataRecommendation, { color: '#d32f2f' }]}
+               >
+                 {`Issues: ${analysisData.detectedIssues.slice(0, 2).join(', ')}`}
+               </Text>
+             )}
+           </View>
+         )}
+
+         {/* Scan Data Card */}
+         {scanData && !analysisData && (
+           <View
+             style={[
+               styles.scanDataCard,
+               { backgroundColor: isDark ? '#1a1a1a' : '#f0f8ff' },
+             ]}
+           >
+             <View style={styles.scanDataHeader}>
+               <Ionicons name="flask-sharp" size={20} color="#4a7c99" />
+               <Text
+                 style={[styles.scanDataTitle, { color: colors.text }]}
+               >
+                 Latest Scan Results
+               </Text>
+             </View>
+             <Text
+               style={[styles.scanDataContent, { color: colors.icon }]}
+             >
+               {getScanDataDisplay()}
+             </Text>
+             {scanData.recommendation && (
+               <Text
+                 style={[styles.scanDataRecommendation, { color: colors.icon }]}
+               >
+                 {scanData.recommendation}
+               </Text>
+             )}
+           </View>
+         )}
 
         {/* Hydration Tracker */}
         <View style={styles.progressSection}>

@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -15,7 +15,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 
 import { ThemedText } from '@/components/themed-text';
 import { useAuth } from '@/context/authContext';
-import { signIn, signUp, resetPassword, signInWithGoogle } from '@/services/firebase';
+import { signIn, signUp, resetPassword, signInWithGoogle, handleGoogleRedirectResult } from '@/services/firebase';
 
 // Colors
 const DARK_BG = '#0f172a';
@@ -42,6 +42,22 @@ export default function AuthScreen() {
   const [forgotLoading, setForgotLoading] = useState(false);
   const [forgotError, setForgotError] = useState('');
   const [forgotSuccess, setForgotSuccess] = useState(false);
+
+  // Check for Google redirect on mount
+  useEffect(() => {
+    const checkGoogleRedirect = async () => {
+      const { data, error: redirectError } = await handleGoogleRedirectResult();
+      if (data) {
+        // User signed in via Google redirect
+        console.log('Google redirect sign-in successful');
+        router.push('/payment');
+      } else if (redirectError) {
+        setError(redirectError);
+      }
+    };
+
+    checkGoogleRedirect();
+  }, []);
 
   const isValidEmail = (email: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
