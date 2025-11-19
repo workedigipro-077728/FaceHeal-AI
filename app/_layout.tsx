@@ -11,9 +11,6 @@ import { ThemeProvider as CustomThemeProvider } from '@/context/ThemeContext';
 import { RoutineProvider } from '@/context/RoutineContext';
 import { AuthProvider } from '@/context/authContext';
 
-// Initialize Firebase
-import '@/services/firebase';
-
 const ONBOARDING_KEY = 'onboarding_completed';
 
 export const unstable_settings = {

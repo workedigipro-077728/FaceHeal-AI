@@ -15,7 +15,7 @@ import { useRouter } from 'expo-router';
 
 import { ThemedText } from '@/components/themed-text';
 import { useTheme } from '@/context/ThemeContext';
-import { signOut } from '@/services/firebase';
+import { useAuth } from '@/context/authContext';
 
 interface Setting {
   id: string;
@@ -35,6 +35,7 @@ interface SettingsCategory {
 export default function SettingsScreen() {
   const router = useRouter();
   const { isDarkMode, setIsDarkMode, theme } = useTheme();
+  const { logout } = useAuth();
   const [notifications, setNotifications] = useState(true);
   const [dataCollection, setDataCollection] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
@@ -97,19 +98,10 @@ export default function SettingsScreen() {
           
           setIsLoggingOut(true);
           try {
-            console.log('🔐 Starting logout process with Firebase...');
+            console.log('🔐 Starting logout process with Supabase...');
             
-            // Call Firebase signOut
-            const { error } = await signOut();
-            
-            console.log('🔐 Firebase signOut result:', { error });
-            
-            if (error) {
-              console.error('🔐 Logout error from Firebase:', error);
-              setIsLoggingOut(false);
-              Alert.alert('Error', 'Failed to logout: ' + error);
-              return;
-            }
+            // Call Supabase logout
+            await logout();
             
             console.log('🔐 Logout successful, navigating to auth...');
             

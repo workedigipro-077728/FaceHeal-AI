@@ -20,8 +20,8 @@ import { useTheme } from "@/context/ThemeContext";
 import { FaceHealthAnalysis } from "@/src/services/gemini.service";
 import { scanStorage } from "@/src/services/storage.service";
 import { useRoutine } from "@/context/RoutineContext";
-import { auth } from "@/services/firebase";
-import { saveScanDataAndGeneratePlan } from "@/services/firebase";
+import { useAuth } from "@/context/authContext";
+import { uploadSkinScan } from "@/services/supabase";
 
 // Color definitions
 const DARK_BG = "#1a3a3f";
@@ -41,6 +41,7 @@ export default function AnalysisScreen() {
   const themeKey = colorScheme ?? "light";
   const params = useLocalSearchParams();
   const { updateRoutinesFromScan } = useRoutine();
+  const { user } = useAuth();
 
   // Parse the analysis data from params
   const analysisData = useMemo(() => {
@@ -68,22 +69,17 @@ export default function AnalysisScreen() {
       // Update daily routine based on scan results
       updateRoutinesFromScan(analysisData);
 
-      // Save to Firebase if user is authenticated
-      if (auth.currentUser?.uid) {
-        saveScanDataAndGeneratePlan(auth.currentUser.uid, null, analysisData)
-          .then((result) => {
-            if (result.success) {
-              console.log("Scan data saved to Firebase:", result.scanId);
-            } else {
-              console.error("Error saving to Firebase:", result.error);
-            }
-          })
-          .catch((e) => {
-            console.error("Error saving scan to Firebase:", e);
-          });
+      // Save to Supabase if user is authenticated
+      if (user?.id) {
+        // For now, we'll just log success since we need image file handling
+        console.log(
+          "Scan analysis ready to save to Supabase for user:",
+          user.id
+        );
+        // TODO: Implement image conversion and Supabase upload when file handling is ready
       }
     }
-  }, [analysisData, imageUri, updateRoutinesFromScan]);
+  }, [analysisData, imageUri, updateRoutinesFromScan, user]);
 
   if (!analysisData) {
     return (
@@ -134,11 +130,11 @@ export default function AnalysisScreen() {
   };
 
   const handleNewScan = () => {
-    router.push("/(tabs)/scan");
+    router.push("/(tabs)");
   };
 
   const handleViewDailyRoutine = () => {
-    router.push("/(tabs)/daily-routine");
+    router.push("/(tabs)");
   };
 
   return (
@@ -249,7 +245,7 @@ export default function AnalysisScreen() {
             <MetricCard
               icon="water-drop"
               label="Hydration"
-              value={(skinCondition as any)?.hydration || "Good"}
+              value={((skinCondition as any)?.hydration as string) || "Good"}
               color="#87ceeb"
             />
           </View>
@@ -283,24 +279,26 @@ export default function AnalysisScreen() {
               Personalized Recommendations
             </ThemedText>
 
-            {(recommendations as any).morningRoutine &&
-              (recommendations as any).morningRoutine.length > 0 && (
+            {((recommendations as any)?.morningRoutine as Array<any>) &&
+              ((recommendations as any).morningRoutine as Array<any>).length >
+                0 && (
                 <RecommendationBlock
                   title="☀️ Morning Routine"
                   items={(recommendations as any).morningRoutine}
                 />
               )}
 
-            {(recommendations as any).nightRoutine &&
-              (recommendations as any).nightRoutine.length > 0 && (
+            {((recommendations as any)?.nightRoutine as Array<any>) &&
+              ((recommendations as any).nightRoutine as Array<any>).length >
+                0 && (
                 <RecommendationBlock
                   title="🌙 Night Routine"
                   items={(recommendations as any).nightRoutine}
                 />
               )}
 
-            {(recommendations as any).products &&
-              (recommendations as any).products.length > 0 && (
+            {((recommendations as any)?.products as Array<any>) &&
+              ((recommendations as any).products as Array<any>).length > 0 && (
                 <RecommendationBlock
                   title="🧴 Recommended Products"
                   items={(recommendations as any).products}
@@ -308,8 +306,8 @@ export default function AnalysisScreen() {
                 />
               )}
 
-            {(recommendations as any).lifestyle &&
-              (recommendations as any).lifestyle.length > 0 && (
+            {((recommendations as any)?.lifestyle as Array<any>) &&
+              ((recommendations as any).lifestyle as Array<any>).length > 0 && (
                 <RecommendationBlock
                   title="💪 Lifestyle Tips"
                   items={(recommendations as any).lifestyle}
@@ -317,8 +315,8 @@ export default function AnalysisScreen() {
                 />
               )}
 
-            {(recommendations as any).exercises &&
-              (recommendations as any).exercises.length > 0 && (
+            {((recommendations as any)?.exercises as Array<any>) &&
+              ((recommendations as any).exercises as Array<any>).length > 0 && (
                 <RecommendationBlock
                   title="🧘 Facial Exercises"
                   items={(recommendations as any).exercises}
@@ -338,7 +336,9 @@ export default function AnalysisScreen() {
             onPress={handleViewDailyRoutine}
           >
             <MaterialIcons name="checklist" size={20} color={DARK_BG} />
-            <ThemedText style={styles.primaryButtonText}>View Daily Plan</ThemedText>
+            <ThemedText style={styles.primaryButtonText}>
+              View Daily Plan
+            </ThemedText>
           </Pressable>
 
           <Pressable
